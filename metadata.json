@@ -1,0 +1,6 @@
+{
+  "name": "MinilabMentor IA",
+  "description": "Herramienta inteligente de diagnóstico y resolución de bloqueos financieros, creación de contenido, liderazgo y ventas para emprendedores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

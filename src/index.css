@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Custom glow effects and luxurious prestige overrides */
+@layer utilities {
+  .glow-gold {
+    box-shadow: 0 10px 30px -10px rgba(217, 119, 6, 0.35);
+  }
+  .glow-turquoise {
+    box-shadow: 0 10px 30px -10px rgba(20, 184, 166, 0.25);
+  }
+  .glow-violet {
+    box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.25);
+  }
+  .glow-[#fbbf24] {
+    box-shadow: 0 10px 25px -5px rgba(251, 191, 36, 0.4);
+  }
+  .glow-malva {
+    box-shadow: 0 10px 30px -10px rgba(192, 132, 252, 0.3);
+  }
+  .bg-radial-prestige {
+    background: radial-gradient(circle at top, #faf9f5 0%, #f4f2ea 40%, #eae7dc 100%);
+  }
+  .letter-press {
+    text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Scrollbar customization adapted to light prestige theme */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f2ea;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b45309;
+}
+
