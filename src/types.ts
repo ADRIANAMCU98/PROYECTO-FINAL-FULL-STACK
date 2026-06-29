@@ -32,6 +32,7 @@ export interface MentorPlan {
     problem: string;
     answers: DiagnosticAnswers;
     businessName?: string;
+    email?: string;
   };
   motivationQuote: string;
   diagnostico: string;

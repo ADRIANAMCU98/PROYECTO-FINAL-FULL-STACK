@@ -53,7 +53,7 @@ app.post("/api/generate-plan", async (req, res) => {
     }
 
     const promptText = `
-    Eres Minerva, una mentora de negocios sumamente perspicaz de "MinilabMentor IA".
+    Eres una mentora de negocios sumamente perspicaz de "MinilabMentor IA".
     Tu especialidad es transformar bloqueos empresariales pesados en planes de acción hiper-efectivos y de alto impacto visual.
 
     Datos del emprendedor actual:

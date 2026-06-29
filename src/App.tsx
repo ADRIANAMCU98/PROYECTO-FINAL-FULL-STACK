@@ -11,6 +11,7 @@ import {
   Trash2, 
   Play, 
   ArrowRight, 
+  ArrowLeft,
   ChevronRight, 
   ChevronLeft,
   RefreshCw, 
@@ -181,7 +182,7 @@ export function getPrebuiltPlanForSample(nicheName: string): MentorPlan {
         }
       },
       motivationQuote: "El buen maquetador programa líneas de código. El gran líder supremo de agencia diseña sistemas donde otros operan por él.",
-      diagnostico: "Tu agencia no es una empresa de verdad; es un autoempleo altamente demandante y estresante. Tu pavor a delegar radica en que no tienes un estándar documentado (SOP). Crees que nadie tiene tu mismo nivel, pero eso se corrige creando sistemas transparentes. Mientras sigas atornillado a Figma y VS Code, tus ingresos sufrirán de un techo de cristal agobiante. Minerva IA te ordena desvincularte del ensamble técnico contratando un freelancer por proyecto, cobrando un 50% anticipado y tomando nuestra mentoría premium.",
+      diagnostico: "Tu agencia no es una empresa de verdad; es un autoempleo altamente demandante y estresante. Tu pavor a delegar radica en que no tienes un estándar documentado (SOP). Crees que nadie tiene tu mismo nivel, pero eso se corrige creando sistemas transparentes. Mientras sigas atornillado a Figma y VS Code, tus ingresos sufrirán de un techo de cristal agobiante. El consultor IA te aconseja desvincularte del ensamble técnico contratando un freelancer por proyecto, cobrando un 50% anticipado y tomando nuestra mentoría premium.",
       finanzas: "Plan de Caja y Recursos: Despáchate de suscripciones que no retornen liquidez. Empieza a aliarse con un programador freelance junior pagándole exclusivamente por hitos completados de forma que el costo sea variable. Al fijar un abono del 50% por adelantado a tus clientes corporativos, es su propio anticipo el que financia los recursos de ensamble sin tocar tu capital personal.",
       contenidoTabla: [
         {
@@ -487,6 +488,36 @@ export default function App() {
   const [agendarSesionOpen, setAgendarSesionOpen] = useState(false);
   const [areaPremiumOpen, setAreaPremiumOpen] = useState(false);
   const [premiumAlertOpen, setPremiumAlertOpen] = useState(false);
+  const [comunidadOpen, setComunidadOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [showFestin, setShowFestin] = useState(false);
+  const [selectedHour, setSelectedHour] = useState("11:30 AM (Central)");
+
+  // Email state for free audit capturing
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem("minilab_user_email_v1") || "";
+  });
+
+  // Interactive community states to make all buttons work
+  const [communityMessages, setCommunityMessages] = useState(() => {
+    const saved = localStorage.getItem("minilab_community_msgs_v1");
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: "1", author: "Carlos S.", role: "Diseño Web", text: "Acabo de terminar mi sesión 1:1 con Adri. Cambié mi oferta principal de un pago simple a un abono mensual. ¡Dupliqué mi ticket promedio!", time: "Hace 15 min", likes: 8 },
+      { id: "2", author: "Ana M.", role: "Clínica Dental", text: "El autodiagnóstico con IA es una locura de preciso. La estrategia de marca premium me encaja al 100%.", time: "Hace 2 horas", likes: 12 },
+      { id: "3", author: "Roberto G.", role: "Café de Especialidad", text: "Ya implementé el gancho de Reels sugerido para mi nicho. He tenido más interacciones en un día que en toda la semana pasada.", time: "Hace 1 día", likes: 19 }
+    ];
+  });
+  const [newMsgText, setNewMsgText] = useState("");
+
+  // Sync userEmail and communityMessages
+  useEffect(() => {
+    localStorage.setItem("minilab_user_email_v1", userEmail);
+  }, [userEmail]);
+
+  useEffect(() => {
+    localStorage.setItem("minilab_community_msgs_v1", JSON.stringify(communityMessages));
+  }, [communityMessages]);
 
   // Loading States
   const [isLoading, setIsLoading] = useState(false);
@@ -688,14 +719,19 @@ export default function App() {
       return;
     }
 
+    if (!userEmail.trim() || !userEmail.includes("@")) {
+      setErrorMsg("Por favor, ingresa un Correo Electrónico válido para poder recibir tu auditoría gratis.");
+      return;
+    }
+
     if (!niche.trim() || !problema.trim()) {
       setErrorMsg("Por favor, llena tu nicho/industria y redacta tus bloqueos principales.");
       return;
     }
 
-    if (credits <= 0 && !useDemoMock) {
-      setErrorMsg("Has alcanzado tu límite de mentorías de prueba de esta sesión. Puedes reiniciar los créditos o usar el botón 'Mock Demo' para probar la App de inmediato.");
-      return;
+    // Auto-recharge credits to prevent any lockouts or blocks for the user
+    if (credits <= 0) {
+      setCredits(3);
     }
 
     setIsLoading(true);
@@ -724,7 +760,8 @@ export default function App() {
               niche: niche,
               problem: problema,
               answers: diagnosticAnswers,
-              businessName: businessName
+              businessName: businessName,
+              email: userEmail
             },
             ...customizedFallback
           };
@@ -736,6 +773,7 @@ export default function App() {
           feedTrackingPanel(generatedMock);
 
           setIsLoading(false);
+          setShowFestin(true); // Trigger celebratory festines
         }, 3200);
         return;
       }
@@ -753,7 +791,8 @@ export default function App() {
           modeloNegocio: businessModel,
           mayorReto: maxReto,
           respuestasPreguntas: diagnosticAnswers,
-          nombreNegocio: businessName
+          nombreNegocio: businessName,
+          email: userEmail
         })
       });
 
@@ -791,9 +830,10 @@ export default function App() {
       feedTrackingPanel(newPlan);
 
       setIsLoading(false);
+      setShowFestin(true); // Trigger celebratory festines
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || "No se pudo conectar con Minerva IA. ¿Está el servidor activo? También puedes utilizar el botón 'Desbloquear Demo Libre' abajo.");
+      setErrorMsg(err.message || "No se pudo conectar con el servicio de Inteligencia Artificial. ¿Está el servidor activo? También puedes utilizar el botón 'Desbloquear Demo Libre' abajo.");
       setIsLoading(false);
     }
   };
@@ -883,10 +923,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FAF9F6] text-slate-800 font-sans selection:bg-amber-100 selection:text-amber-950">
+    <div className="min-h-screen flex bg-[#F0F5FA] text-slate-800 font-sans selection:bg-amber-100 selection:text-amber-950">
       
       {/* SIDEBAR DE CONTROL PREMIUM (RÉPLICA EXACTA DE LA IMAGEN DE REFERENCIA) */}
-      <div className="hidden md:flex flex-col w-64 bg-[#1F354D] text-slate-300 border-r border-[#EAD293]/10 shrink-0 sticky top-0 h-screen py-6 px-4 justify-between z-40 shadow-2xl">
+      <div className="hidden flex-col w-64 bg-[#1F354D] text-slate-300 border-r border-[#EAD293]/10 shrink-0 sticky top-0 h-screen py-6 px-4 justify-between z-40 shadow-2xl">
         <div className="flex flex-col gap-6 w-full">
           {/* Logo con Monograma de la Corona de Oro */}
           <div className="flex items-center gap-3 px-2">
@@ -980,7 +1020,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setPremiumAlertOpen(true)}
+              onClick={() => setComunidadOpen(true)}
               className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 transition-all cursor-pointer text-xs font-black"
             >
               <Users className="w-4 h-4 shrink-0" />
@@ -1022,33 +1062,122 @@ export default function App() {
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         
         {/* CABECERA ESTILO RÉPLICA FIEL DE LA IMAGEN DE REFERENCIA */}
-        <header className="bg-white text-slate-800 py-4 px-4 sm:px-8 border-b border-slate-100 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div className="flex-1 text-center md:text-left">
-            <h2 className="text-xl sm:text-2xl font-serif font-black text-[#1F354D] tracking-tight">
-              Mentoria MiniLab con Adri
-            </h2>
+        <header className="bg-white/95 backdrop-blur-md text-slate-800 py-4 px-4 sm:px-8 border-b border-slate-150 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+          <div className="flex items-center gap-3 flex-1">
+            {activeSubTab !== "resumen" && (
+              <button
+                onClick={() => {
+                  setActiveTab("diagnostico");
+                  setActiveSubTab("resumen");
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-[#355C7D] transition-all cursor-pointer shadow-sm"
+                title="Volver al Inicio"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <div className="text-left">
+              <h2 
+                onClick={() => {
+                  setActiveTab("diagnostico");
+                  setActiveSubTab("resumen");
+                }}
+                className="text-lg sm:text-2xl font-serif font-black text-[#1F354D] tracking-tight cursor-pointer hover:text-[#355C7D] transition-colors flex items-center gap-2"
+              >
+                <span>Mentoria MiniLab con Adri</span>
+                <span className="hidden sm:inline text-xs font-mono font-black uppercase px-2 py-0.5 bg-blue-50 text-[#355C7D] rounded-full border border-blue-100">
+                  ESTRATEGIA ÉLITE
+                </span>
+              </h2>
+            </div>
           </div>
 
           <div className="flex items-center gap-3.5 shrink-0">
-            {/* Botón Plan Premium */}
+            {/* Botón Quiero mi Jugada Maestra en la Cabecera */}
             <button 
-              onClick={() => setAreaPremiumOpen(true)}
-              className="cursor-pointer hidden sm:flex items-center gap-1.5 px-4 py-2 border border-[#EAD293] bg-[#FAF8F5] hover:bg-[#FAF6EE] rounded-xl text-xs font-black text-amber-700 transition-all duration-150 active:scale-95 shadow-sm"
+              onClick={() => setAgendarSesionOpen(true)}
+              className="cursor-pointer group relative overflow-hidden flex items-center gap-1.5 px-4 py-2 border-2 border-amber-400 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl text-[10px] sm:text-xs font-black text-slate-950 transition-all duration-150 active:scale-95 shadow-md animate-pulse"
+              style={{ animationDuration: '4s' }}
             >
-              <Crown className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-              <span>Plan Premium</span>
+              <Crown className="w-3.5 h-3.5 text-slate-950" />
+              <span>¡QUIERO MI JUGADA MAESTRA!</span>
             </button>
 
             {/* Icono de Campana con Badge */}
-            <div className="relative cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-all" onClick={() => setPremiumAlertOpen(true)}>
-              <div className="relative">
-                <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-mono text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-black animate-bounce">
+            <div className="relative">
+              <div 
+                className="cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-all relative" 
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <span className="absolute top-1 right-1 bg-rose-600 text-white font-mono text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-black animate-bounce">
                   2
                 </span>
                 <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
+
+              {/* Dynamic Notification Popover */}
+              <AnimatePresence>
+                {notificationsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 text-left space-y-3"
+                    >
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-xs font-black text-slate-900 uppercase">Notificaciones Recientes</span>
+                        <span className="text-[9px] font-bold text-[#355C7D] bg-blue-50 px-2 py-0.5 rounded-full uppercase">Activo</span>
+                      </div>
+                      
+                      <div className="space-y-2 text-xs">
+                        {/* Notification item 1 */}
+                        <div 
+                          onClick={() => {
+                            setNotificationsOpen(false);
+                            setActiveTab("diagnostico");
+                            setActiveSubTab("estrategia");
+                          }}
+                          className="p-2.5 hover:bg-slate-50 border border-transparent hover:border-amber-200 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
+                        >
+                          <span className="text-lg">📊</span>
+                          <div>
+                            <p className="font-bold text-slate-800">¡Auditoría de IA Lista!</p>
+                            <p className="text-[10px] text-slate-500 leading-normal">La Inteligencia Artificial ha analizado tu marca. Revisa el Modelo de Riqueza y Estrategia.</p>
+                          </div>
+                        </div>
+
+                        {/* Notification item 2 */}
+                        <div 
+                          onClick={() => {
+                            setNotificationsOpen(false);
+                            setAgendarSesionOpen(true);
+                          }}
+                          className="p-2.5 hover:bg-slate-50 border border-transparent hover:border-amber-200 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
+                        >
+                          <span className="text-lg">👑</span>
+                          <div>
+                            <p className="font-bold text-slate-800">Cita estratégica disponible</p>
+                            <p className="text-[10px] text-slate-500 leading-normal">Tienes 3 créditos libres para agendar tu mentoría 1:1 directa con Adri.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex justify-end">
+                        <button 
+                          onClick={() => setNotificationsOpen(false)}
+                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase"
+                        >
+                          Cerrar panel
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Profile Avatar Widget */}
@@ -1075,65 +1204,73 @@ export default function App() {
             
             {/* 1. MAIN BANNER: CHESS WEALTH STRATEGY */}
             <div 
-              className="lg:col-span-3 rounded-3xl p-6 sm:p-8 border border-[#EAD293]/40 shadow-xl overflow-hidden relative flex flex-col justify-between min-h-[290px] transition-all duration-300 hover:shadow-2xl"
+              className="lg:col-span-3 rounded-3xl p-6 sm:p-8 border-2 border-amber-300 shadow-xl overflow-hidden relative flex flex-col justify-between min-h-[300px] transition-all duration-300 hover:shadow-2xl"
               style={{
-                backgroundImage: `linear-gradient(to right, rgba(6, 12, 30, 0.98) 45%, rgba(6, 12, 30, 0.55) 100%), url('/src/assets/images/chess_wealth_banner_1782592054142.jpg')`,
+                backgroundImage: `linear-gradient(to right, #0b1530 0%, rgba(11, 21, 48, 0.95) 35%, rgba(26, 37, 76, 0.75) 65%, rgba(245, 158, 11, 0.15) 100%), url('${chessStrategyImg}')`,
                 backgroundSize: 'cover',
-                backgroundPosition: 'right center'
+                backgroundPosition: 'center'
               }}
             >
               {/* Gold glow top corner */}
-              <div className="absolute top-0 left-0 w-80 h-80 bg-amber-500/5 rounded-full filter blur-3xl pointer-events-none" />
+              <div className="absolute top-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full filter blur-3xl pointer-events-none" />
               
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10 h-full items-center">
                 
                 {/* Left side text column */}
                 <div className="md:col-span-7 space-y-4 text-left">
-                  <div className="inline-flex items-center gap-2.5 bg-amber-500/10 border border-[#EAD293]/40 px-3 py-1 rounded-full">
-                    <span className="text-[#EAD293] animate-pulse">✦</span>
-                    <span className="text-[9px] text-amber-200 uppercase font-mono tracking-widest font-black leading-none">
+                  <div className="inline-flex items-center gap-2.5 bg-amber-500/10 border border-amber-500/35 px-3 py-1 rounded-full">
+                    <span className="text-amber-400 animate-pulse">✦</span>
+                    <span className="text-[9px] text-amber-300 uppercase font-mono tracking-widest font-black leading-none">
                       ESTRATEGIA CIENTÍFICA 🔬♟️
                     </span>
                   </div>
 
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-white leading-[1.2] tracking-tight">
-                    ¿Tu negocio es un <span className="text-[#FFB300] font-black underline decoration-[#EAD293]/40 underline-offset-4">hobby</span>... <br/>
-                    o una máquina de <span className="text-[#FFB300] font-black">generar riqueza?</span>
+                    ¿Tu negocio es un <span className="text-amber-400 font-black underline decoration-amber-400/50 underline-offset-4">hobby</span>... <br/>
+                    o una máquina de <span className="text-[#EAD293] font-black">generar riqueza?</span>
                   </h1>
 
-                  <p className="text-slate-300 text-xs sm:text-[13px] leading-relaxed max-w-md font-sans font-medium">
+                  <p className="text-slate-300 text-xs sm:text-[13px] leading-relaxed max-w-md font-sans font-semibold">
                     Descubre si tu negocio está listo para crecer, vender y escalar con estrategia. Solicita una auditoría instantánea para posicionar tu marca hoy.
                   </p>
 
-                  <div className="pt-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {/* MASTER MOVE (CALENDAR) BUTTON */}
+                    <button
+                      onClick={() => setAgendarSesionOpen(true)}
+                      type="button"
+                      className="cursor-pointer group relative px-5 py-3 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 flex items-center justify-center gap-2 font-sans animate-bounce"
+                      style={{ animationDuration: '3.5s' }}
+                    >
+                      <Crown className="w-4 h-4 text-slate-950" />
+                      <span>♟️ ¡QUIERO MI JUGADA MAESTRA! 🚀</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-950 group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    {/* LED-PULSING FREE AUDIT BUTTON */}
                     <button
                       onClick={() => {
-                        if (currentPlan) {
-                          setActiveSubTab("estrategia");
-                        } else {
-                          setActiveSubTab("analisis");
-                          setTimeout(() => {
-                            const el = document.getElementById("auth-diagnosis-form");
-                            if (el) el.scrollIntoView({ behavior: 'smooth' });
-                          }, 150);
+                        const el = document.getElementById("auth-diagnosis-form");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth", block: "center" });
                         }
                       }}
                       type="button"
-                      className="cursor-pointer group relative px-6 py-3 bg-gradient-to-r from-amber-500 via-[#ffb300] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 flex items-center gap-2 font-sans"
+                      className="cursor-pointer group relative px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.6)] hover:shadow-[0_0_25px_rgba(16,185,129,0.9)] border-2 border-emerald-400/40 transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 font-sans animate-bounce"
+                      style={{ animationDuration: '2s' }}
                     >
-                      <span>MOSTRAR MI ANÁLISIS PERSONALIZADO</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-950 group-hover:translate-x-1 transition-transform" />
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-80"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+                      </span>
+                      <span>🎁 ¡QUIERO MI AUDITORÍA GRATIS! ⭐</span>
                     </button>
-                    
-                    <div className="flex items-center gap-1.5 bg-slate-950/50 border border-slate-800 px-3 py-1.5 rounded-lg text-amber-300 text-[10px] font-bold font-mono">
-                      <span>🎁 1 auditoría gratis</span>
-                    </div>
                   </div>
                 </div>
 
                 {/* Right side checklist card overlay */}
-                <div className="md:col-span-5 bg-slate-950/85 backdrop-blur-md rounded-2xl border border-[#EAD293]/35 p-4 sm:p-5 text-white shadow-xl space-y-3">
-                  <h4 className="text-[11px] uppercase tracking-wider text-amber-200 font-extrabold font-sans leading-none pb-2 border-b border-slate-800">
+                <div className="md:col-span-5 bg-[#0B1530]/90 backdrop-blur-md rounded-2xl border-2 border-amber-300 p-4 sm:p-5 text-white shadow-xl space-y-3">
+                  <h4 className="text-[11px] uppercase tracking-wider text-amber-300 font-extrabold font-sans leading-none pb-2 border-b border-white/10">
                     Lo que te llevas con tu diagnóstico:
                   </h4>
                   <ul className="space-y-2.5 text-[11.5px] font-sans">
@@ -1145,7 +1282,7 @@ export default function App() {
                     ].map((item, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-200 font-medium">{item}</span>
+                        <span className="text-amber-100/90 font-extrabold">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -1211,37 +1348,67 @@ export default function App() {
 
           </div>
 
-          {/* HORIZONTAL TABBED MENU ROW (RÉPLICA DEL INTERFACE DE LA IMAGEN DE REFERENCIA) */}
-          <div className="bg-[#FAF6EE] p-1.5 rounded-2xl border border-[#EAD293]/40 flex items-center justify-between overflow-x-auto whitespace-nowrap scrollbar-none shadow-sm">
-            <div className="flex items-center gap-1">
+          {/* HORIZONTAL TABBED MENU ROW (RÉPLICA DEL INTERFACE DE LA IMAGEN DE REFERENCIA - ULTRA VISUAL Y ACTIVA) */}
+          <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl border-2 border-amber-200 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl mb-8">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-start">
               {[
-                { id: "resumen", label: "Resumen" },
-                { id: "analisis", label: "Análisis" },
-                { id: "estrategia", label: "Estrategia" },
-                { id: "sitioweb", label: "Sitio web" },
-                { id: "marketing", label: "Marketing" },
-                { id: "mentoria", label: "Mentoria" }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab("diagnostico");
-                    setActiveSubTab(tab.id as any);
-                  }}
-                  className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                    activeTab === "diagnostico" && activeSubTab === tab.id
-                      ? "bg-[#355C7D] text-white shadow-md border border-[#EAD293]/20"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-amber-500/5"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: "resumen", label: "Resumen", icon: Sparkles, color: "text-amber-500", desc: "Vista general" },
+                { id: "analisis", label: "Análisis", icon: FileText, color: "text-blue-500", desc: "Tus respuestas" },
+                { id: "estrategia", label: "Estrategia", icon: TrendingUp, color: "text-emerald-500", desc: "Modelo de Riqueza" },
+                { id: "sitioweb", label: "Sitio Web", icon: Monitor, color: "text-indigo-500", desc: "Optimización web" },
+                { id: "marketing", label: "Marketing", icon: Target, color: "text-rose-500", desc: "Plan de atracción" },
+                { id: "mentoria", label: "Mentoría", icon: Users, color: "text-violet-500", desc: "Acompañamiento" }
+              ].map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = activeTab === "diagnostico" && activeSubTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab("diagnostico");
+                      setActiveSubTab(tab.id as any);
+                    }}
+                    className={`group relative px-4 py-3 rounded-2xl transition-all duration-300 cursor-pointer flex items-center gap-3 border ${
+                      isActive
+                        ? "bg-gradient-to-br from-[#1F354D] to-[#355C7D] text-white border-transparent shadow-lg scale-102"
+                        : "bg-slate-50/60 hover:bg-slate-100/90 text-slate-700 border-slate-200/60 hover:border-amber-300"
+                    }`}
+                  >
+                    {/* Icon Container */}
+                    <div className={`p-2 rounded-xl transition-colors duration-300 ${
+                      isActive ? "bg-white/10" : "bg-white border border-slate-100 shadow-xs"
+                    }`}>
+                      <IconComponent className={`w-4 h-4 ${isActive ? "text-amber-300 animate-pulse" : tab.color}`} />
+                    </div>
+
+                    {/* Text block */}
+                    <div className="text-left leading-none">
+                      <div className={`text-xs font-black tracking-tight ${isActive ? "text-white" : "text-slate-900"}`}>
+                        {tab.label}
+                      </div>
+                      <div className={`text-[9px] mt-0.5 font-medium ${isActive ? "text-slate-300" : "text-slate-400 group-hover:text-slate-500"}`}>
+                        {tab.desc}
+                      </div>
+                    </div>
+
+                    {/* Active highlight dot */}
+                    {isActive && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             
-            <div className="hidden lg:flex items-center gap-2 pr-2 text-[10px] font-mono font-bold text-[#854d0e]">
-              <span>Plataforma Activa</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <div className="hidden lg:flex items-center gap-3 pr-3 py-1.5 px-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-[10px] font-bold text-emerald-800">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-mono uppercase tracking-wider">Módulo de Autodiagnóstico Activo</span>
             </div>
           </div>
 
@@ -1279,45 +1446,166 @@ export default function App() {
           {activeTab === "diagnostico" && activeSubTab === "resumen" && (
             <div className="space-y-6">
               
-              {/* NUEVO BANNER CON IMAGEN DE LA RELACIÓN Y DETALLES */}
-              <div className="bg-gradient-to-r from-[#FAF6F0] via-white to-[#F0F4F8] rounded-3xl border border-slate-200/60 p-6 sm:p-8 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                <div className="md:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-1.5 bg-[#E2EAF4] border border-slate-200 px-3 py-1 rounded-full text-[10px] text-[#2C4E6D] uppercase font-mono font-bold">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                    <span>Estrategia de Crecimiento Elevada</span>
+              {/* COMPLEMENTO: ESPECTACULAR CUADRO DE AUDITORÍA GRATIS INTERACTIVO */}
+              <div className="bg-gradient-to-r from-[#FFFDF9] via-white to-[#F3F7FA] rounded-3xl border-2 border-[#EAD293] p-6 sm:p-8 shadow-md shadow-amber-100/50 overflow-hidden relative group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full filter blur-2xl pointer-events-none" />
+                
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  
+                  {/* Left Column: Highly Persuasive Text and Value Props */}
+                  <div className="lg:col-span-5 space-y-5">
+                    <div className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-250 px-3 py-1 rounded-full text-[9px] text-amber-850 uppercase font-mono font-black animate-pulse">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>🎁 Regalo de Adriana Mentora • Valorado en €497</span>
+                    </div>
+                    
+                    <h2 className="text-2xl sm:text-3xl font-serif font-black text-[#1F354D] leading-tight">
+                      ♟️ ¡QUIERO MI AUDITORÍA GRATIS! ⭐
+                    </h2>
+                    
+                    <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                      Completa este test veloz de 15 segundos. La Inteligencia Artificial <span className="text-[#355C7D] font-bold">del Consultor Virtual</span> analizará al instante las fugas de flujo de caja en tu negocio local, rediseñará tu modelo comercial y te entregará una hoja de ruta de crecimiento innegociable.
+                    </p>
+                    
+                    {/* Key Core Bullet Points */}
+                    <div className="space-y-3.5 pt-2">
+                      {[
+                        { title: "Mapeo de Fugas de Capital", text: "Detecta exactamente dónde estás perdiendo clientes y ventas.", icon: TrendingUp, iconColor: "text-amber-500" },
+                        { title: "Estructura de Ofertas Élite", text: "Multiplica el valor percibido de tus servicios locales.", icon: Award, iconColor: "text-[#355C7D]" },
+                        { title: "Estrategia Reptil de Ventas", text: "Hooks y argumentos listos para usar basados en instintos básicos.", icon: Flame, iconColor: "text-orange-500" },
+                        { title: "Plan Operativo de 7 Días", text: "Acciones estructuradas día por día para captar caja de inmediato.", icon: CheckCircle2, iconColor: "text-emerald-500" },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex gap-3 items-start text-left">
+                          <div className={`p-1.5 rounded-lg bg-slate-50 border border-slate-150 ${item.iconColor} shrink-0`}>
+                            <item.icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-slate-800 leading-tight">{item.title}</h4>
+                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{item.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
+                      <span className="text-[9px] font-bold font-mono text-slate-400 uppercase tracking-widest">MINILABMENTOR • HOJA DE RUTA EXCLUSIVA</span>
+                    </div>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-serif font-black text-[#1F354D] leading-tight">
-                    Optimiza tus Servicios y duplica tus resultados con <span className="text-[#355C7D] font-black">Estrategia Élite</span>
-                  </h2>
-                  <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
-                    Descubre tus bloqueos invisibles de flujo de caja, estructura ofertas irresistibles y diseña un embudo de conversión ágil para agendar llamadas estables. Realiza el diagnóstico guiado por Inteligencia Artificial para recibir tu hoja de ruta personalizada.
-                  </p>
-                  <div className="flex flex-wrap gap-2.5 pt-1">
-                    <button
-                      onClick={() => setActiveSubTab("analisis")}
-                      className="px-5 py-2.5 bg-[#355C7D] hover:bg-[#456C8D] text-white text-[10.5px] font-black uppercase tracking-wider rounded-xl hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#EAD293]" />
-                      Comenzar Diagnóstico IA
-                    </button>
-                    <button
-                      onClick={() => setActiveSubTab("sitioweb")}
-                      className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-[#355C7D] text-[10.5px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
-                    >
-                      Ver Plano Web Recomendado
-                    </button>
+
+                  {/* Right Column: Direct Interactive Diagnostics Form */}
+                  <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-150 p-5 sm:p-6 shadow-sm relative">
+                    <span className="absolute top-3 right-3 text-[8.5px] font-mono font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      ✓ Canal Seguro de IA Activo
+                    </span>
+                    
+                    <h3 className="text-xs font-extrabold text-slate-705 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex items-center gap-1">
+                      <Briefcase className="w-3.5 h-3.5 text-[#355C7D]" />
+                      Ingresa los Datos de tu Negocio
+                    </h3>
+
+                    <form onSubmit={(e) => handleCreatePlan(e, false)} className="space-y-4">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* BUSINESS NAME */}
+                        <div className="space-y-1">
+                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
+                            🏪 Nombre de tu Negocio <span className="text-amber-600">*</span>
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={businessName}
+                            onChange={(e) => setBusinessName(e.target.value)}
+                            className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
+                            placeholder="Ej: Cafetería Aromas"
+                          />
+                        </div>
+
+                        {/* MARKET NICHE */}
+                        <div className="space-y-1">
+                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
+                            🎯 Nicho de Mercado o Sector <span className="text-amber-600">*</span>
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            value={niche}
+                            onChange={(e) => setNiche(e.target.value)}
+                            className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
+                            placeholder="Ej: Estética, Pastelería"
+                          />
+                        </div>
+                      </div>
+
+                      {/* USER EMAIL */}
+                      <div className="space-y-1 bg-amber-50/40 p-3.5 rounded-xl border border-amber-200/50">
+                        <label className="block text-sm sm:text-[15px] font-black text-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <span>📧 Tu Correo Electrónico <span className="text-amber-600">*</span></span>
+                          <span className="text-[10px] sm:text-xs uppercase font-mono font-bold text-[#355C7D]">Para enviarte el PDF</span>
+                        </label>
+                        <input
+                          required
+                          type="email"
+                          value={userEmail}
+                          onChange={(e) => setUserEmail(e.target.value)}
+                          className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
+                          placeholder="tu-correo@ejemplo.com"
+                        />
+                      </div>
+
+                      {/* PROBLEM / OBSTACLE DESCRIPTION */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
+                            ⚠️ ¿Cuál es tu bloqueo o problema principal? <span className="text-amber-600">*</span>
+                          </label>
+                          {/* QUICK SUGGESTIONS TRIGGER */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProblema("Mis clientes dicen que mis servicios son caros y no logro agendar llamadas de ventas de manera constante para mi pastelería.");
+                              setBusinessName("Pasteles Dulce Arte");
+                              setNiche("Pastelería Artesanal");
+                            }}
+                            className="text-xs text-[#355C7D] hover:underline font-bold"
+                          >
+                            🪄 Rellenar ejemplo
+                          </button>
+                        </div>
+                        <textarea
+                          required
+                          rows={3}
+                          value={problema}
+                          onChange={(e) => setProblema(e.target.value)}
+                          className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 leading-normal"
+                          placeholder="Ej: No consigo agendar llamadas estables, o mis clientes se quejan de las tarifas y no gano lo suficiente..."
+                        />
+                      </div>
+
+                      {/* ACTION PILLS - ONLY ONE STRONG BUTTON */}
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className="w-full py-4 bg-[#355C7D] hover:bg-[#2C4E6D] text-[#EAD293] text-sm sm:text-base font-black uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                        >
+                          {isLoading ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 text-[#EAD293] animate-spin" />
+                              <span className="animate-pulse text-sm sm:text-base">Analizando {businessName || "tu negocio"}...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
+                              <span className="text-sm sm:text-base">Generar Mi Auditoría Gratis</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                    </form>
                   </div>
-                </div>
-                <div className="md:col-span-5">
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-150 shadow-md aspect-video max-w-sm mx-auto md:max-w-none">
-                    <img 
-                      src={coachingHeroImg} 
-                      alt="Estrategia y Mentoría de Negocio" 
-                      className="w-full h-full object-cover rounded-2xl"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
-                  </div>
+
                 </div>
               </div>
 
@@ -1527,22 +1815,73 @@ export default function App() {
                           {/* Inside Menu List */}
                           <div className="space-y-1">
                             {[
-                              { label: 'Resumen', active: true },
-                              { label: 'Análisis', action: () => {
-                                const formEl = document.querySelector("#auth-diagnosis-form");
-                                if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
-                              } },
-                              { label: 'Estrategia', action: () => setActiveTab("resultado") },
-                              { label: 'Sitio web', action: () => setServiciosOpen(true) },
-                              { label: 'Marketing', action: () => setMetodologiaOpen(true) },
-                              { label: 'Mentoría', action: () => setSobreMiOpen(true) },
-                              { label: 'Recursos', action: () => setRecursosOpen(true) },
-                              { label: 'Configuración', action: () => setAreaPremiumOpen(true) }
+                              { 
+                                label: 'Resumen', 
+                                active: activeTab === "diagnostico" && activeSubTab === "resumen",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("resumen");
+                                }
+                              },
+                              { 
+                                label: 'Análisis', 
+                                active: activeTab === "diagnostico" && activeSubTab === "analisis",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("analisis");
+                                  setTimeout(() => {
+                                    const formEl = document.querySelector("#auth-diagnosis-form");
+                                    if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                                  }, 150);
+                                }
+                              },
+                              { 
+                                label: 'Estrategia', 
+                                active: activeTab === "diagnostico" && activeSubTab === "estrategia",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("estrategia");
+                                }
+                              },
+                              { 
+                                label: 'Sitio web', 
+                                active: activeTab === "diagnostico" && activeSubTab === "sitioweb",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("sitioweb");
+                                }
+                              },
+                              { 
+                                label: 'Marketing', 
+                                active: activeTab === "diagnostico" && activeSubTab === "marketing",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("marketing");
+                                }
+                              },
+                              { 
+                                label: 'Mentoría', 
+                                active: activeTab === "diagnostico" && activeSubTab === "mentoria",
+                                action: () => {
+                                  setActiveTab("diagnostico");
+                                  setActiveSubTab("mentoria");
+                                }
+                              },
+                              { 
+                                label: 'Recursos', 
+                                active: false,
+                                action: () => setRecursosOpen(true) 
+                              },
+                              { 
+                                label: 'Configuración', 
+                                active: false,
+                                action: () => setAreaPremiumOpen(true) 
+                              }
                             ].map((item) => (
                               <button
                                 key={item.label}
                                 type="button"
-                                onClick={item.action || (() => setPremiumAlertOpen(true))}
+                                onClick={item.action}
                                 className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[10.5px] font-extrabold font-sans transition-all flex items-center justify-between ${
                                   item.active 
                                     ? 'bg-[#355C7D] text-white shadow-xs' 
@@ -1836,7 +2175,7 @@ export default function App() {
                   Fórmula de Autodiagnóstico Estructurado
                 </h3>
                 <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                  Completa el test rápido para activar la inteligencia artificial. Minerva IA reordenará tus finanzas virtuales, optimizará tus conversiones y generará tu estrategia exclusiva al instante.
+                  Completa el test rápido para activar la inteligencia artificial. Nuestra tecnología reordenará tus finanzas virtuales, optimizará tus conversiones y generará tu estrategia exclusiva al instante.
                 </p>
               </div>
 
@@ -1866,13 +2205,13 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* BUSINESS NAME FIELD */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-705 mb-2 flex items-center gap-1.5 font-sans">
+                      <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex items-center gap-1.5 font-sans">
                         🏪 Nombre de tu Negocio Local <span className="text-amber-600 font-bold">*</span>
                       </label>
                       <input
                         required
                         type="text"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
                         placeholder="Ej: Cafetería Aromas, Autolavado Central"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
@@ -1881,13 +2220,13 @@ export default function App() {
 
                     {/* NICHE FIELD */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-707 mb-2 flex items-center gap-1.5">
+                      <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex items-center gap-1.5">
                         1. ¿Cuál es tu Nicho de Mercado o Sector? <span className="text-amber-600 font-bold">*</span>
                       </label>
                       <input
                         required
                         type="text"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 font-sans"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 font-sans"
                         placeholder="Ej: Odontología Estética, Pastelería Artesanal"
                         value={niche}
                         onChange={(e) => setNiche(e.target.value)}
@@ -1895,18 +2234,34 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* EMAIL ADDRESS FIELD - CAPTURING AUDIT LEADS */}
+                  <div className="bg-amber-50/50 p-4 rounded-2xl border-2 border-amber-200/60">
+                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex flex-col sm:flex-row sm:items-center gap-1.5 font-sans">
+                      <span>📧 Tu Correo Electrónico <span className="text-amber-600 font-bold">*</span></span>
+                      <span className="text-[10px] sm:text-xs text-[#355C7D] font-mono font-bold uppercase bg-white px-2.5 py-0.5 rounded-md border border-amber-200">Para recibir tu Auditoría Completa en PDF</span>
+                    </label>
+                    <input
+                      required
+                      type="email"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-450"
+                      placeholder="Ej: tu-correo@ejemplo.com"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                    />
+                  </div>
+
                   {/* BUSINESS MODEL SELECT */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-707 mb-2">
+                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2">
                       2. Modelo de Negocio Base
                     </label>
                     <select
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all cursor-pointer font-sans"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all cursor-pointer font-sans"
                       value={businessModel}
                       onChange={(e) => setBusinessModel(e.target.value)}
                     >
                       {BUSINESS_MODELS.map((m) => (
-                        <option key={m} value={m} className="bg-white text-slate-800 font-sans">
+                        <option key={m} value={m} className="bg-white text-slate-850 font-sans text-sm sm:text-base">
                           {m}
                         </option>
                       ))}
@@ -1915,19 +2270,19 @@ export default function App() {
 
                   {/* STAGED MULTIPLES QUESTIONS */}
                   <div className="bg-[#FAF7F9] rounded-2xl p-5 border border-purple-100 space-y-4 shadow-2xs">
-                    <span className="text-xs font-bold text-[#355C7D] font-mono flex items-center gap-1.5 pb-2.5 border-b border-slate-200/50">
-                      <Award className="w-3.5 h-3.5 text-[#355C7D] animate-pulse" />
+                    <span className="text-sm font-black text-[#355C7D] font-mono flex items-center gap-1.5 pb-2.5 border-b border-slate-200/50">
+                      <Award className="w-4 h-4 text-[#355C7D] animate-pulse" />
                       Preguntas de Autodiagnóstico Integrado
                     </span>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {DIAG_QUESTIONS.map((q) => (
                         <div key={q.id} className="space-y-1.5 text-left">
-                          <label className="block text-[10.5px] font-bold text-slate-600 font-sans leading-tight">
+                          <label className="block text-xs sm:text-[13px] font-bold text-slate-700 font-sans leading-tight">
                             {q.question}
                           </label>
                           <select
-                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-2 text-[10.5px] text-slate-800 focus:outline-none focus:border-purple-600 font-sans"
+                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-2.5 text-xs sm:text-[13px] text-slate-800 focus:outline-none focus:border-purple-600 font-sans"
                             value={(diagnosticAnswers as any)[q.id] || ""}
                             onChange={(e) => setDiagnosticAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                           >
@@ -1944,49 +2299,37 @@ export default function App() {
 
                   {/* CORE OBSTACLE OR BLOCK MESSAGE AREA */}
                   <div>
-                    <label className="block text-xs font-bold text-[#355C7D] mb-2 font-sans">
+                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 font-sans">
                       3. Describe tu problema o bloqueo actual <span className="text-amber-600 font-bold">*</span>
                     </label>
                     <textarea
                       required
                       rows={4}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 leading-relaxed font-sans"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 leading-relaxed font-sans"
                       placeholder="Cuéntanos con confianza o haz clic en un ejemplo rápido. Qué te frena o preocupa hoy de tu negocio..."
                       value={problema}
                       onChange={(e) => setProblema(e.target.value)}
                     ></textarea>
                   </div>
 
-                  {/* FORM ACTION SUBMIT PILLS */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    {/* IA SUBMISSION TRIGGER */}
+                  {/* FORM ACTION SUBMIT PILLS - ONLY ONE STRONG BUTTON */}
+                  <div className="pt-2">
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="cursor-pointer relative overflow-hidden bg-[#355C7D] hover:bg-[#2C4E6D] text-white font-black py-4 px-6 rounded-xl text-xs transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 duration-300 uppercase tracking-wider font-mono active:scale-98"
+                      className="w-full cursor-pointer relative overflow-hidden bg-[#355C7D] hover:bg-[#2C4E6D] text-white font-black py-4 px-6 rounded-xl text-sm sm:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 duration-300 uppercase tracking-wider font-mono active:scale-98 disabled:opacity-75"
                     >
                       {isLoading ? (
                         <>
-                          <RefreshCw className="w-4 h-4 text-white animate-spin" />
-                          <span>Escribiendo solución...</span>
+                          <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                          <span className="animate-pulse text-sm sm:text-base">Analizando {businessName || "tu negocio"}...</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4 text-[#EAD293] animate-pulse" />
-                          <span>Crear mi Plan de Élite (IA Minerva)</span>
+                          <Sparkles className="w-5 h-5 text-[#EAD293] animate-pulse" />
+                          <span className="text-sm sm:text-base">Generar Mi Auditoría Gratis</span>
                         </>
                       )}
-                    </button>
-
-                    {/* INSTANT SIMULATE / DEMO BUTTON FOR DIRECT USABILITY */}
-                    <button
-                      type="button"
-                      disabled={isLoading}
-                      onClick={(e) => handleCreatePlan(e, true)}
-                      className="cursor-pointer font-bold py-4 px-6 bg-white hover:bg-amber-50/50 border border-[#EAD293] text-[#7E3B60] text-xs transition-all rounded-xl flex items-center justify-center gap-1.5 duration-300 active:scale-98 shadow-xs"
-                    >
-                      <Play className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Carga Instantánea de Inteligencia (Demo)</span>
                     </button>
                   </div>
 
@@ -2019,6 +2362,7 @@ export default function App() {
                   setCalcSavings={setCalcSavings}
                   businessName={businessName}
                   handleNewAnalysis={handleNewAnalysis}
+                  onAgendarSesion={() => setAgendarSesionOpen(true)}
                 />
               ) : (
                 <div className="bg-white rounded-3xl p-8 border border-purple-100 shadow-xl max-w-2xl mx-auto text-center space-y-6">
@@ -2278,7 +2622,7 @@ export default function App() {
                 <div className="space-y-1 text-left">
                   <h4 className="text-xs font-serif font-black text-[#3C1A2F]">¿Necesitas ángulos adaptados a tu micronicho?</h4>
                   <p className="text-[10px] text-slate-500 max-w-xl">
-                    Al realizar el autodiagnóstico con IA Minerva, generaremos hasta 7 ángulos estratégicos ultra-segmentados para tus productos o servicios específicos de manera automatizada.
+                    Al realizar el autodiagnóstico con nuestra Inteligencia Artificial, generaremos hasta 7 ángulos estratégicos ultra-segmentados para tus productos o servicios específicos de manera automatizada.
                   </p>
                 </div>
                 <button
@@ -2505,6 +2849,7 @@ export default function App() {
               setCalcSavings={setCalcSavings}
               businessName={businessName}
               handleNewAnalysis={handleNewAnalysis}
+              onAgendarSesion={() => setAgendarSesionOpen(true)}
             />
           )}
 
@@ -2940,7 +3285,7 @@ export default function App() {
                   "No se trata de publicar más contenido o de comprar más herramientas. Se trata de estructurar un embudo elegante de valor real y asumir un liderazgo sólido."
                 </div>
                 <p>
-                  A través de esta plataforma interactiva y con la ayuda de la inteligencia de Minerva IA, he democratizado el acceso a análisis tácticos instantáneos para miles de emprendedores de habla hispana.
+                  A través de esta plataforma interactiva y con la ayuda de la inteligencia artificial avanzada, he democratizado el acceso a análisis tácticos instantáneos para miles de emprendedores de habla hispana.
                 </p>
               </div>
 
@@ -3305,26 +3650,53 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                     <div className="space-y-2.5">
                       <div>
                         <label className="block font-bold text-slate-700 mb-1">Fecha de Sesión *</label>
                         <input 
                           required 
                           type="date" 
                           min="2026-06-22"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-[#355C7D] cursor-pointer"
+                          defaultValue="2026-06-30"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] cursor-pointer"
                         />
                       </div>
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">Hora Favorita *</label>
-                        <select 
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-[#355C7D] cursor-pointer"
-                        >
-                          <option value="11:00">11:00 AM (Central)</option>
-                          <option value="13:30">1:30 PM (Central)</option>
-                          <option value="16:00">4:00 PM (Central)</option>
-                          <option value="18:30">6:30 PM (Central)</option>
-                        </select>
+                        <label className="block font-bold text-slate-700 mb-1.5 flex justify-between items-center">
+                          <span>Hora Favorita (Slots Disponibles) *</span>
+                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">Zona Central</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            "10:00 AM",
+                            "11:30 AM",
+                            "02:00 PM",
+                            "04:30 PM",
+                            "06:00 PM",
+                            "07:30 PM"
+                          ].map((hourOption) => {
+                            const isSelected = selectedHour.includes(hourOption);
+                            return (
+                              <button
+                                key={hourOption}
+                                type="button"
+                                onClick={() => setSelectedHour(hourOption + " (Central)")}
+                                className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                                  isSelected
+                                    ? "bg-[#355C7D] border-[#355C7D] text-[#EAD293] shadow-md scale-102"
+                                    : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                                }`}
+                              >
+                                <span>{hourOption}</span>
+                                {isSelected ? (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                ) : (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -3393,7 +3765,7 @@ export default function App() {
 
               <div className="space-y-3 text-xs text-slate-600 leading-relaxed font-sans">
                 <p>
-                  Obtén el beneficio de créditos ilimitados de autodiagnóstico Minerva IA, informes exportables en PDF, integraciones a CRM y acceso directo a nuestro grupo VIP de WhatsApp de emprendedores de élite.
+                  Obtén el beneficio de créditos ilimitados de autodiagnóstico con Inteligencia Artificial, informes exportables en PDF, integraciones a CRM y acceso directo a nuestro grupo VIP de WhatsApp de emprendedores de élite.
                 </p>
                 <div className="p-3 bg-[#F0F4F8] rounded-xl border border-[#EAD293]/30 text-slate-700 font-medium">
                   🌟 Incluye 1 llamada de estrategia VIP 1:1 de 45 minutos conmigo cada mes.
@@ -3459,6 +3831,230 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* OVERLAY POPUP MODAL 8: INTERACTIVE COMMUNITY FEED */}
+      <AnimatePresence>
+        {comunidadOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#0B1530]/75 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+            onClick={() => setComunidadOpen(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 space-y-4 relative shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-tr from-amber-400 to-[#EAD293] rounded-xl text-slate-900 shadow-sm">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Comunidad Élite</h3>
+                    <p className="text-[9px] text-slate-400 font-mono font-bold leading-none mt-0.5">SOPORTE Y COLABORACIÓN MENTORÍA</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setComunidadOpen(false)}
+                  className="text-xs font-black text-slate-400 hover:text-slate-600 uppercase"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              {/* Message input box */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newMsgText.trim()) return;
+                  const newMsg = {
+                    id: "usr-" + Date.now(),
+                    author: "Tú",
+                    role: businessName || "Emprendedor",
+                    text: newMsgText.trim(),
+                    time: "Ahora mismo",
+                    likes: 0
+                  };
+                  setCommunityMessages(prev => [newMsg, ...prev]);
+                  setNewMsgText("");
+                }}
+                className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200"
+              >
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-left">Publicar un pensamiento o duda rápida:</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#355C7D]"
+                    placeholder="Escribe tu consulta para Adri y la comunidad..."
+                    value={newMsgText}
+                    onChange={(e) => setNewMsgText(e.target.value)}
+                  />
+                  <button 
+                    type="submit"
+                    className="cursor-pointer bg-[#355C7D] text-white text-[10px] uppercase font-black px-4 rounded-xl hover:bg-[#2C4E6D] transition-colors"
+                  >
+                    Enviar
+                  </button>
+                </div>
+              </form>
+
+              {/* Message scroll list */}
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {communityMessages.map((msg: any) => (
+                  <div key={msg.id} className="p-3 bg-white border border-slate-150 rounded-2xl shadow-xs space-y-1.5 text-left">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-black text-slate-800">{msg.author}</span>
+                        <span className="text-[9px] text-[#A06283] font-bold ml-2 bg-purple-50 px-1.5 py-0.5 rounded-full uppercase">{msg.role}</span>
+                      </div>
+                      <span className="text-[9px] text-slate-400">{msg.time}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{msg.text}</p>
+                    <div className="flex justify-between items-center pt-1">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setCommunityMessages(prev => prev.map(m => m.id === msg.id ? { ...m, likes: m.likes + 1 } : m));
+                        }}
+                        className="text-[10px] text-slate-400 hover:text-amber-600 font-bold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        👍 <span>{msg.likes}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center text-[10px] text-amber-800 font-medium">
+                💬 Adriana Mentora y su IA responden activamente en este panel de debate diario.
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* OVERLAY POPUP MODAL 9: FESTINES DE OPTIMIZACIÓN (CONFETTI CELEBRATION) */}
+      <AnimatePresence>
+        {showFestin && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#0B1530]/85 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-hidden"
+            onClick={() => setShowFestin(false)}
+          >
+            {/* FLOATING CONFETTI EMITTER SIMULATOR */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {[...Array(25)].map((_, i) => {
+                const randomX = Math.random() * 100;
+                const randomDelay = Math.random() * 3;
+                const randomDuration = 3 + Math.random() * 4;
+                const emojis = ["🎉", "✨", "🚀", "♟️", "📈", "💎", "👑", "🏆", "🔥", "🎯"];
+                const emoji = emojis[i % emojis.length];
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ y: "105vh", x: `${randomX}vw`, rotate: 0, scale: 0.5 }}
+                    animate={{ 
+                      y: "-10vh", 
+                      rotate: 360 * (Math.random() > 0.5 ? 1 : -1),
+                      scale: [0.5, 1.2, 0.8]
+                    }}
+                    transition={{ 
+                      duration: randomDuration, 
+                      repeat: Infinity, 
+                      delay: randomDelay,
+                      ease: "linear"
+                    }}
+                    className="absolute text-2xl sm:text-3xl filter drop-shadow-md select-none"
+                  >
+                    {emoji}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* GOLDEN CELEBRATION CARD */}
+            <motion.div 
+              initial={{ scale: 0.8, y: 50, rotate: -1 }}
+              animate={{ scale: 1, y: 0, rotate: 0 }}
+              exit={{ scale: 0.8, y: 50 }}
+              className="bg-white rounded-3xl border-4 border-amber-400 max-w-lg w-full p-6 sm:p-8 space-y-6 relative shadow-[0_0_50px_rgba(245,158,11,0.5)] text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* TOP TROPHY EMBLEM */}
+              <div className="mx-auto w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl border-2 border-amber-300 shadow-inner animate-bounce">
+                🏆
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl sm:text-2xl font-serif font-black text-slate-900 tracking-tight">
+                  ¡OPTIMIZACIÓN LOGRADA! 🎉
+                </h3>
+                <p className="text-xs text-amber-850 font-bold uppercase tracking-wider font-mono">
+                  Tu Mentor de Negocios IA Élite
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed font-sans font-medium px-2">
+                  Hemos diagnosticado con éxito <strong className="text-[#355C7D]">{businessName || "tu negocio"}</strong>. Hemos detectado las fugas de flujo de caja y diseñado una ruta táctica imparable de 7 días.
+                </p>
+              </div>
+
+              {/* INTERACTIVE PROGRESS MILESTONES WITH DELAYED REVEAL */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-2.5 text-left font-sans">
+                {[
+                  { label: "Modelo de Riqueza Calculado", icon: "📊" },
+                  { label: "Mapeo de Nicho y Cliente Ideal Completado", icon: "🎯" },
+                  { label: "Gancho Psicológico de 3s Formulado", icon: "🔥" },
+                  { label: "Plan Táctico de 7 Días Estructurado", icon: "♟️" }
+                ].map((item, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 * idx }}
+                    className="flex items-center gap-3 text-xs font-semibold text-slate-700"
+                  >
+                    <span className="text-emerald-500 font-bold text-base">✓</span>
+                    <span>{item.icon} {item.label}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* REWARD CALL TO ACTION BUTTON */}
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowFestin(false);
+                    setActiveTab("diagnostico");
+                    setActiveSubTab("estrategia");
+                  }}
+                  className="w-full cursor-pointer py-3.5 px-6 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 font-sans"
+                >
+                  <span>♟️ VER MI PLAN ESTRATÉGICO AHORA</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
+                </button>
+
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Copia del plan y seguimiento interactivo listos para su análisis.
+                </p>
+              </div>
+
+              {/* CLOSE BUTTON */}
+              <button 
+                onClick={() => setShowFestin(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* FOOTER */}
       <footer className="mt-20 border-t border-[#ebd390]/30 bg-amber-50/10 py-8 text-center text-xs text-slate-500 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -3468,6 +4064,8 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+
 
       </div> {/* CLOSING FOR THE ADJACENT MAIN CONTENT WRAPPER */}
     </div>

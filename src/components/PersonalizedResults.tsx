@@ -10,7 +10,13 @@ import {
   Table, 
   Users, 
   Flame,
-  Plus
+  Plus,
+  ArrowRight,
+  Calendar,
+  Crown,
+  Award,
+  TrendingUp,
+  CheckCircle2
 } from "lucide-react";
 import { MentorPlan } from "../types";
 
@@ -33,6 +39,7 @@ interface PersonalizedResultsProps {
   setCalcSavings: (val: number) => void;
   businessName?: string;
   handleNewAnalysis?: () => void;
+  onAgendarSesion?: () => void;
 }
 
 export const PersonalizedResults: React.FC<PersonalizedResultsProps> = ({
@@ -54,7 +61,10 @@ export const PersonalizedResults: React.FC<PersonalizedResultsProps> = ({
   setCalcSavings,
   businessName = "",
   handleNewAnalysis,
+  onAgendarSesion,
 }) => {
+  const percentComplete = Math.min(100, Math.round(((loadingStep + 1) / (loadingMessages.length || 5)) * 100));
+
   return (
     <div className="space-y-8">
       <AnimatePresence mode="wait">
@@ -66,27 +76,59 @@ export const PersonalizedResults: React.FC<PersonalizedResultsProps> = ({
              initial={{ opacity: 0, scale: 0.95 }}
              animate={{ opacity: 1, scale: 1 }}
              exit={{ opacity: 0, scale: 0.9 }}
-             className="bg-white/90 p-8 rounded-2xl border border-amber-200 shadow-xl flex flex-col items-center justify-center min-h-[460px] text-center backdrop-blur-md"
+             className="bg-gradient-to-br from-[#0B1530] via-[#1A254C] to-[#253266] p-8 sm:p-12 rounded-3xl border-2 border-amber-300 shadow-2xl flex flex-col items-center justify-center min-h-[500px] text-center relative overflow-hidden"
           >
-            {/* Prestigious Loader */}
-            <div className="relative mb-6">
-              <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-amber-200 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+            {/* Glowing ambient background grids */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15),transparent_60%)] pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent animate-pulse" />
+
+            {/* High-End Scanning Circle with Live Progress */}
+            <div className="relative mb-8">
+              {/* outer progress ring */}
+              <svg className="w-28 h-28 transform -rotate-90">
+                <circle cx="56" cy="56" r="48" stroke="rgba(255,255,255,0.06)" strokeWidth="4" fill="transparent" />
+                <motion.circle 
+                  cx="56" 
+                  cy="56" 
+                  r="48" 
+                  stroke="#F59E0B" 
+                  strokeWidth="5" 
+                  fill="transparent" 
+                  strokeDasharray="301.6" 
+                  animate={{ strokeDashoffset: 301.6 - (301.6 * percentComplete) / 100 }}
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                  strokeLinecap="round" 
+                />
+              </svg>
+              {/* Inner glowing core */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-white/5 border border-amber-300/30 flex flex-col items-center justify-center shadow-lg">
+                <Sparkles className="w-7 h-7 text-amber-400 animate-bounce" />
+                <span className="text-sm font-mono font-black text-amber-300 tracking-tight mt-0.5">{percentComplete}%</span>
               </div>
             </div>
 
-            <h3 className="text-xl font-black font-serif text-[#0B1530] tracking-tight mb-2">
-              {businessName ? `Analizando ${businessName}...` : "Analizando..."}
-            </h3>
+            <div className="space-y-3 max-w-lg">
+              <span className="text-[10px] tracking-widest font-mono font-black text-amber-300 uppercase bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/30">
+                PROCESANDO CON CONSULTORÍA IA ÉLITE
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black font-serif text-white tracking-tight">
+                {businessName ? `Escaneando y Optimizando: ${businessName}` : "Analizando Métricas..."}
+              </h3>
 
-            {/* Stage dynamic information messages */}
-            <p className="text-sm font-bold font-sans text-indigo-650 h-6">
-              {loadingMessages[loadingStep]}
-            </p>
+              {/* Status information messages */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 backdrop-blur-xs">
+                <p className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-2 mb-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  Estado: Procesando Datos
+                </p>
+                <p className="text-sm font-sans text-amber-100 font-semibold italic min-h-[40px] flex items-center justify-center">
+                  "{loadingMessages[loadingStep]}"
+                </p>
+              </div>
+            </div>
 
-            <p className="text-slate-500 text-xs mt-8 max-w-sm leading-relaxed font-semibold">
-              Por favor, no recargues la pestaña. Minerva está estructurando tu consultoría comercial integral en un formato de altísimo valor.
+            <p className="text-slate-400 text-[10.5px] mt-10 max-w-sm leading-relaxed font-semibold">
+              El motor inteligente está diagnosticando tus fugas de capital y reestructurando tu oferta de servicios para un retorno de inversión acelerado.
             </p>
           </motion.div>
         )}
@@ -140,7 +182,7 @@ export const PersonalizedResults: React.FC<PersonalizedResultsProps> = ({
             <div className="bg-white/80 p-5 rounded-2xl border border-amber-200/60 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-md">
               <div>
                 <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200">
-                  Estrategia Minerva IA Élite
+                  Estrategia IA Élite
                 </span>
                 <h2 className="text-xl font-black font-serif text-slate-900 mt-2">
                   {currentPlan.userPrompt.businessName ? `${currentPlan.userPrompt.businessName} • ` : ""}{currentPlan.userPrompt.niche}
@@ -195,6 +237,66 @@ ${currentPlan.hooksVirales.join('\n')}
                 </button>
               </div>
             </div>
+
+            {/* CTA BANNER: ¡TU JUGADA MAESTRA! */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-gradient-to-r from-[#0B1530] via-[#1E294B] to-[#3B152A] rounded-3xl border-2 border-amber-300 p-6 sm:p-8 text-white relative overflow-hidden shadow-2xl shadow-amber-500/5 group"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.12),transparent_70%)] pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full filter blur-3xl pointer-events-none" />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="inline-flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/30 px-3 py-1 rounded-full text-[10px] text-amber-300 uppercase font-mono font-bold">
+                    <Crown className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>SESIÓN TÁCTICA 1:1 RECOMENDADA</span>
+                  </div>
+                  
+                  <h3 className="text-xl sm:text-2xl font-serif font-black text-white leading-tight tracking-tight">
+                    ♟️ ¡Tu Jugada Maestra está Lista para Ejecución!
+                  </h3>
+                  
+                  <p className="text-xs text-slate-350 leading-relaxed max-w-2xl font-medium">
+                    Adriana Mentora ha preparado tu diagnóstico virtual. El siguiente paso innegociable es agendar tu <span className="text-amber-300 font-bold">Sesión Estratégica Gratuita de 45 Minutos</span> para descifrar tus bloqueos de flujo de caja, subir tus precios y estructurar una hoja de ruta con claridad táctica del 100%.
+                  </p>
+
+                  {/* Trust checkmarks */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[10px] font-bold text-amber-200/90 font-mono pt-1">
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      45 Mins de Alto Impacto
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Hoja de Ruta 100% Práctica
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Sin Compromiso
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Cupos Limitados de la Semana
+                    </span>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 flex justify-start lg:justify-end">
+                  <button
+                    onClick={onAgendarSesion}
+                    type="button"
+                    className="w-full lg:w-auto px-7 py-4 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.4)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)] transition-all duration-300 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 cursor-pointer active:scale-97"
+                  >
+                    <Calendar className="w-4 h-4 text-slate-950 shrink-0" />
+                    <span>¡QUIERO MI JUGADA MAESTRA!</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-950" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
 
             {/* DYNAMIC TARJETAS SEPARADAS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -663,6 +765,50 @@ ${currentPlan.hooksVirales.join('\n')}
               </div>
 
             </div>
+
+            {/* BOTTOM PERSUASIVE JUGADA MAESTRA CTA */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-br from-[#121E3B] via-[#1D254C] to-[#2D3F75] border-2 border-amber-300 p-6 sm:p-8 rounded-3xl text-center space-y-5 relative overflow-hidden shadow-2xl mt-8"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.15),transparent_60%)] pointer-events-none" />
+              <div className="absolute -top-12 -left-12 w-24 h-24 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
+              
+              <div className="max-w-xl mx-auto space-y-3 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center mx-auto mb-2">
+                  <Award className="w-5 h-5 text-amber-300 animate-pulse" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-serif font-black text-white">
+                  ¿Listo para ejecutar tu Jugada Maestra con Adriana Mentora?
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed font-semibold">
+                  No dejes este análisis sorprendente acumulando polvo digital. Lleva estas tácticas a la acción guiada por Adriana Mentora. Agenda hoy mismo tu sesión 1:1 táctica sin costo para trazar el plan operativo definitivo de {currentPlan.userPrompt.businessName || "tu negocio"}.
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-2 flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <button
+                  onClick={onAgendarSesion}
+                  type="button"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-[#FAF6EE] hover:bg-[#FFF] text-slate-900 text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
+                >
+                  <Calendar className="w-4 h-4 text-[#355C7D]" />
+                  Agendar Sesión de Mentoría
+                </button>
+                <button
+                  onClick={() => setActiveTab("diagnostico")}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-transparent border border-white/20 hover:bg-white/5 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                >
+                  Volver al Diagnóstico
+                </button>
+              </div>
+
+              <div className="text-[9px] text-slate-400 font-mono tracking-widest pt-1 relative z-10">
+                ✦ CUPOS SEMANALES EXTREMADAMENTE LIMITADOS ✦
+              </div>
+            </motion.div>
 
           </motion.div>
         )}
