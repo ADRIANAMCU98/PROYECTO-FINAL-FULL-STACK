@@ -2,8 +2,13 @@
 
 Plataforma de mentoría empresarial con IA (Gemini) para diagnóstico estratégico, planes de 7 días y seguimiento de metas.
 
-**Repositorio:** [ADRIANAMCU98/PROYECTO-FINAL-FULL-STACK](https://github.com/ADRIANAMCU98/PROYECTO-FINAL-FULL-STACK)  
-**Deploy:** [proyecto-final-full-stack-alpha.vercel.app](https://proyecto-final-full-stack-alpha.vercel.app)
+## Para Adriana — ver la web ya
+
+**Abrir la aplicación:** https://proyecto-final-full-stack-nine.vercel.app  
+
+Instrucciones completas (Vercel, GitHub, claves): ver **[GUIA-ADRIANA.md](./GUIA-ADRIANA.md)**
+
+**Repositorio:** [ADRIANAMCU98/PROYECTO-FINAL-FULL-STACK](https://github.com/ADRIANAMCU98/PROYECTO-FINAL-FULL-STACK)
 
 ## Requisitos
 
