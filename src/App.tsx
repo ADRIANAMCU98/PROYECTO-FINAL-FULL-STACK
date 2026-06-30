@@ -39,11 +39,12 @@ import {
 import { DIAG_QUESTIONS, BUSINESS_MODELS, SAMPLE_PROBLEMS, FALLBACK_PLAN_MOCK } from "./data";
 import { MentorPlan, DiagnosticAnswers, TrackingGoal } from "./types";
 import { PersonalizedResults } from "./components/PersonalizedResults";
+import { LandingPage } from "./components/LandingPage";
+import { AuditoriaPage } from "./components/AuditoriaPage";
+import { JugadaMaestraPage } from "./components/JugadaMaestraPage";
 
 // @ts-expect-error - Vite virtual static asset import
-import chessStrategyImg from "./assets/images/chess_testtube_strategy_1781808775902.jpg";
-// @ts-expect-error - Vite virtual static asset import
-import coachingHeroImg from "./assets/images/coaching_hero_1782597057691.jpg";
+import chessHeroBackground from "./assets/images/chess_hero_background.png";
 
 // Prebuilt highly polished strategy plans for instant premium transformations
 export function getPrebuiltPlanForSample(nicheName: string): MentorPlan {
@@ -535,6 +536,52 @@ export default function App() {
   const [selectedDays, setSelectedDays] = useState<Record<string, string>>({});
   const [analysisNotice, setAnalysisNotice] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<"resumen" | "analisis" | "estrategia" | "sitioweb" | "marketing" | "mentoria">("resumen");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  type SubTabId = typeof activeSubTab;
+
+  const navigateToDiagnostico = (sub: SubTabId = "resumen") => {
+    setActiveTab("diagnostico");
+    setActiveSubTab(sub);
+    setMobileMenuOpen(false);
+  };
+
+  const navigateToAnalisis = () => {
+    navigateToDiagnostico("analisis");
+    setTimeout(() => {
+      const formEl =
+        document.getElementById("auth-diagnosis-form") ||
+        document.getElementById("auth-diagnosis-form-resumen");
+      formEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+  };
+
+  const navigateToEstrategia = () => navigateToDiagnostico("estrategia");
+
+  const navigateToSeguimiento = () => {
+    setActiveTab("seguimiento");
+    setMobileMenuOpen(false);
+  };
+
+  const navigateToEjemplos = () => {
+    setActiveTab("ejemplos");
+    setMobileMenuOpen(false);
+  };
+
+  const getSectionTitle = (): string => {
+    if (activeTab === "seguimiento") return "Panel de Seguimiento";
+    if (activeTab === "ejemplos") return "Plantillas y Casos Reales";
+    if (activeTab === "resultado") return "Tu Estrategia Personalizada";
+    const titles: Record<SubTabId, string> = {
+      resumen: "Resumen General",
+      analisis: "Autodiagnóstico de Negocio",
+      estrategia: "Modelo de Riqueza y Estrategia",
+      sitioweb: "Optimización de Sitio Web",
+      marketing: "Plan de Marketing",
+      mentoria: "Mentoría y Acompañamiento",
+    };
+    return titles[activeSubTab];
+  };
 
   // Sub-tab interactive states
   const [selectedBookingDay, setSelectedBookingDay] = useState<string>("Lunes");
@@ -544,31 +591,40 @@ export default function App() {
   const [bookingName, setBookingName] = useState<string>("");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
+  // Redirigir pestaña legacy "resultado" hacia estrategia
+  useEffect(() => {
+    if (activeTab === "resultado") {
+      setActiveTab("diagnostico");
+      setActiveSubTab("estrategia");
+    }
+  }, [activeTab]);
+
+  const handleTabNavigation = (tab: "diagnostico" | "resultado" | "seguimiento" | "ejemplos") => {
+    if (tab === "resultado") {
+      navigateToEstrategia();
+    } else if (tab === "diagnostico") {
+      navigateToDiagnostico("analisis");
+    } else if (tab === "seguimiento") {
+      navigateToSeguimiento();
+    } else {
+      navigateToEjemplos();
+    }
+  };
+
   const handleCardDiagnosisClick = () => {
-    setActiveTab("diagnostico");
-    
-    const nameToUse = businessName.trim() || "tu negocio";
-    setAnalysisNotice(`Analizando ${nameToUse}...`);
+    navigateToAnalisis();
 
-    setTimeout(() => {
-      const formElement = document.querySelector("form");
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        const nameInput = formElement.querySelector("input");
-        if (nameInput) {
-          nameInput.focus();
-        }
-      }
-    }, 150);
+    if (!businessName.trim() || !userEmail.trim() || !niche.trim() || !problema.trim()) {
+      setAnalysisNotice("Completa el formulario para generar tu auditoría con IA.");
+      setTimeout(() => setAnalysisNotice(null), 4000);
+      return;
+    }
 
-    setTimeout(() => {
-      const syntheticEvent = { preventDefault: () => {} } as any;
-      handleCreatePlan(syntheticEvent, credits <= 0);
-    }, 1200);
-
-    setTimeout(() => {
-      setAnalysisNotice(null);
-    }, 4500);
+    const nameToUse = businessName.trim();
+    setAnalysisNotice(`Analizando ${nameToUse} con Inteligencia Artificial...`);
+    const syntheticEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleCreatePlan(syntheticEvent, false);
+    setTimeout(() => setAnalysisNotice(null), 4500);
   };
 
   const handleDeveloperReset = () => {
@@ -856,7 +912,7 @@ export default function App() {
       id: "track-" + Date.now(),
       planId: plan.id,
       niche: plan.userPrompt.niche,
-      title: `Plan para Desbloquear: ${plan.userPrompt.niche}`,
+      title: plan.userPrompt.businessName?.trim() || plan.userPrompt.niche,
       createdAt: new Date().toLocaleDateString(),
       tasks: formattedTasks.length > 0 ? formattedTasks : [
         { id: "t-default", dia: "Día 1", dayTitle: "Arrancar Implementación", taskText: "Repasar el diagnóstico de MinilabMentor e ideas rápidas.", completed: false }
@@ -924,11 +980,51 @@ export default function App() {
     return `Diagnóstico del Perfil: ${modelLabel} • Nivel actual: ${teamLabel}`;
   };
 
+  const isLandingView = activeTab === "diagnostico" && activeSubTab === "resumen";
+
+  type PublicFlow = "home" | "auditoria" | "jugada-maestra";
+  const [publicFlow, setPublicFlow] = useState<PublicFlow>("home");
+
+  useEffect(() => {
+    if (!isLandingView) setPublicFlow("home");
+  }, [isLandingView]);
+
+  const handleLandingAgendar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (userEmail.trim()) {
+      localStorage.setItem("minilab_user_email_v1", userEmail);
+      setPublicFlow("jugada-maestra");
+    }
+  };
+
+  const handleAuditoriaSubmit = (e: React.FormEvent) => {
+    handleCreatePlan(e, false);
+  };
+
+  const handleConfirmBooking = (_data: {
+    name: string;
+    date: string;
+    hour: string;
+    business: string;
+    email: string;
+  }) => {
+    setCredits((prev) => Math.max(0, prev - 1));
+    setCopiedText("🎉 ¡Cita confirmada! Te hemos enviado las credenciales de Zoom al correo.");
+    setTimeout(() => setCopiedText(null), 4500);
+  };
+
+  const handleRechargeCredits = () => {
+    setCredits(3);
+    setCopiedText("✨ ¡Créditos recargados! Tienes 3 auditorías listas.");
+    setTimeout(() => setCopiedText(null), 3000);
+  };
+
   return (
-    <div className="min-h-screen flex bg-[#F0F5FA] text-slate-800 font-sans selection:bg-amber-100 selection:text-amber-950">
+    <div className={`min-h-screen flex font-sans ${isLandingView ? "bg-[#050a12] text-white selection:bg-amber-500/30" : "bg-[#050a12] text-white selection:bg-amber-500/30"}`}>
       
-      {/* SIDEBAR DE CONTROL PREMIUM (RÉPLICA EXACTA DE LA IMAGEN DE REFERENCIA) */}
-      <div className="hidden flex-col w-64 bg-[#1F354D] text-slate-300 border-r border-[#EAD293]/10 shrink-0 sticky top-0 h-screen py-6 px-4 justify-between z-40 shadow-2xl">
+      {/* SIDEBAR DE CONTROL PREMIUM — oculto en landing */}
+      {!isLandingView && (
+      <div className="hidden lg:flex flex-col w-64 bg-[#0a1018] text-slate-300 border-r border-white/5 shrink-0 sticky top-0 h-screen py-6 px-4 justify-between z-40 shadow-2xl">
         <div className="flex flex-col gap-6 w-full">
           {/* Logo con Monograma de la Corona de Oro */}
           <div className="flex items-center gap-3 px-2">
@@ -950,10 +1046,7 @@ export default function App() {
           {/* Menú Vertical de Iconos y Etiquetas */}
           <div className="flex flex-col gap-2 w-full">
             <button
-              onClick={() => {
-                setActiveTab("diagnostico");
-                setActiveSubTab("resumen");
-              }}
+              onClick={() => navigateToDiagnostico("resumen")}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
                 activeTab === "diagnostico" && activeSubTab === "resumen"
                   ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
@@ -965,10 +1058,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => {
-                setActiveTab("diagnostico");
-                setActiveSubTab("analisis");
-              }}
+              onClick={() => navigateToAnalisis()}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
                 activeTab === "diagnostico" && activeSubTab === "analisis"
                   ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
@@ -980,10 +1070,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => {
-                setActiveTab("diagnostico");
-                setActiveSubTab("estrategia");
-              }}
+              onClick={() => navigateToEstrategia()}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
                 activeTab === "diagnostico" && activeSubTab === "estrategia"
                   ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
@@ -992,11 +1079,25 @@ export default function App() {
             >
               <div className="flex items-center gap-3.5">
                 <FileText className="w-4 h-4 shrink-0" />
-                <span>Reportes</span>
+                <span>Estrategia</span>
               </div>
-              <span className="bg-amber-600 text-white font-mono text-[9px] px-1.5 py-0.5 rounded-full flex items-center justify-center font-black leading-none animate-pulse">
-                2
-              </span>
+              {currentPlan && (
+                <span className="bg-amber-600 text-white font-mono text-[9px] px-1.5 py-0.5 rounded-full flex items-center justify-center font-black leading-none">
+                  ✓
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={navigateToSeguimiento}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
+                activeTab === "seguimiento"
+                  ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
+                  : "hover:bg-slate-800/40 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <ListTodo className="w-4 h-4 shrink-0" />
+              <span>Seguimiento</span>
             </button>
 
             <button
@@ -1008,9 +1109,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => {
-                setActiveTab("ejemplos");
-              }}
+              onClick={navigateToEjemplos}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
                 activeTab === "ejemplos"
                   ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
@@ -1059,67 +1158,189 @@ export default function App() {
           <ArrowRight className="w-4 h-4 text-[#EAD293] group-hover:translate-x-1.5 transition-transform" />
         </div>
       </div>
+      )}
 
       {/* CONTENIDO PRINCIPAL ADYACENTE */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        
-        {/* CABECERA ESTILO RÉPLICA FIEL DE LA IMAGEN DE REFERENCIA */}
-        <header className="bg-white/95 backdrop-blur-md text-slate-800 py-4 px-4 sm:px-8 border-b border-slate-150 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <div className={`flex-1 flex flex-col min-h-screen overflow-x-hidden relative ${isLandingView ? "" : ""}`}>
+        {/* Landing page completa — diseño oscuro de referencia */}
+        {isLandingView ? (
+          <>
+            {publicFlow === "home" && (
+              <LandingPage
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                isLoading={isLoading}
+                onJugadaMaestra={() => setPublicFlow("jugada-maestra")}
+                onAuditoriaGratis={() => setPublicFlow("auditoria")}
+                onAgendarEmail={handleLandingAgendar}
+                onOpenMenu={() => setMobileMenuOpen(true)}
+              />
+            )}
+            {publicFlow === "auditoria" && (
+              <AuditoriaPage
+                onBack={() => setPublicFlow("home")}
+                businessName={businessName}
+                setBusinessName={setBusinessName}
+                niche={niche}
+                setNiche={setNiche}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                problema={problema}
+                setProblema={setProblema}
+                businessModel={businessModel}
+                setBusinessModel={setBusinessModel}
+                diagnosticAnswers={diagnosticAnswers}
+                setDiagnosticAnswers={setDiagnosticAnswers}
+                isLoading={isLoading}
+                errorMsg={errorMsg}
+                onSubmit={handleAuditoriaSubmit}
+                onClear={handleNewAnalysis}
+              />
+            )}
+            {publicFlow === "jugada-maestra" && (
+              <JugadaMaestraPage
+                onBack={() => setPublicFlow("home")}
+                businessName={businessName}
+                setBusinessName={setBusinessName}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                credits={credits}
+                onRechargeCredits={handleRechargeCredits}
+                onConfirmBooking={handleConfirmBooking}
+              />
+            )}
+            {/* Menú móvil para landing */}
+            <AnimatePresence>
+              {mobileMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <motion.div
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ type: "spring", damping: 25 }}
+                    className="absolute right-0 top-0 bottom-0 w-72 bg-[#0d1520] border-l border-amber-500/20 p-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider mb-6">Menú</h3>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { label: "Inicio", action: () => setPublicFlow("home") },
+                        { label: "Auditoría Gratis", action: () => setPublicFlow("auditoria") },
+                        { label: "Jugada Maestra", action: () => setPublicFlow("jugada-maestra") },
+                        { label: "Estrategia", action: navigateToEstrategia },
+                        { label: "Seguimiento", action: navigateToSeguimiento },
+                        { label: "Plantillas", action: navigateToEjemplos },
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => { item.action(); setMobileMenuOpen(false); }}
+                          className="px-4 py-3 rounded-xl text-sm font-bold text-slate-300 hover:bg-white/5 hover:text-white transition-all cursor-pointer text-left"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Toast global en flujo landing */}
+            <AnimatePresence>
+              {copiedText && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, x: "-50%" }}
+                  animate={{ opacity: 1, y: 0, x: "-50%" }}
+                  exit={{ opacity: 0, y: 15, x: "-50%" }}
+                  className="fixed bottom-6 left-1/2 z-[60] bg-[#0d1520] text-white text-xs px-4 py-2.5 rounded-xl font-bold shadow-2xl flex items-center gap-2 border border-amber-500/40 whitespace-nowrap max-w-[95vw]"
+                >
+                  <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{copiedText}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        ) : (
+        <>
+        {/* Fondo ajedrez — coherente con la landing */}
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `linear-gradient(rgba(5, 10, 18, 0.88), rgba(5, 10, 18, 0.94)), url('${chessHeroBackground}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundAttachment: "fixed",
+          }}
+        />
+
+        {/* Cabecera — tema oscuro unificado */}
+        <header className="app-dark-header text-white py-4 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3 flex-1">
-            {activeSubTab !== "resumen" && (
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-amber-400 transition-all cursor-pointer"
+              aria-label="Abrir menú"
+            >
+              <ChevronDown className={`w-5 h-5 transition-transform ${mobileMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            {activeTab === "diagnostico" && activeSubTab !== "resumen" && (
               <button
-                onClick={() => {
-                  setActiveTab("diagnostico");
-                  setActiveSubTab("resumen");
-                }}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-[#355C7D] transition-all cursor-pointer shadow-sm"
+                onClick={() => navigateToDiagnostico("resumen")}
+                className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-amber-400 transition-all cursor-pointer"
                 title="Volver al Inicio"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
-            <div className="text-left">
+            <div className="text-left min-w-0">
               <h2 
-                onClick={() => {
-                  setActiveTab("diagnostico");
-                  setActiveSubTab("resumen");
-                }}
-                className="text-lg sm:text-2xl font-serif font-black text-[#1F354D] tracking-tight cursor-pointer hover:text-[#355C7D] transition-colors flex items-center gap-2"
+                onClick={() => navigateToDiagnostico("resumen")}
+                className="text-lg sm:text-2xl font-serif font-black text-white tracking-tight cursor-pointer hover:text-amber-400 transition-colors flex items-center gap-2 truncate"
               >
-                <span>Mentoria MiniLab con Adri</span>
-                <span className="hidden sm:inline text-xs font-mono font-black uppercase px-2 py-0.5 bg-blue-50 text-[#355C7D] rounded-full border border-blue-100">
-                  ESTRATEGIA ÉLITE
+                <span className="truncate">{getSectionTitle()}</span>
+                <span className="hidden sm:inline text-[10px] font-mono font-black uppercase px-2.5 py-1 app-badge-gold rounded-full tracking-wider shrink-0">
+                  ◆ App de Ganadores
                 </span>
               </h2>
+              <p className="text-[10px] text-slate-400 font-semibold mt-0.5 hidden sm:block">
+                Mentoria MiniLab con Adri • {businessName || "Tu negocio"}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3.5 shrink-0">
-            {/* Botón Quiero mi Jugada Maestra en la Cabecera */}
             <button 
               onClick={() => setAgendarSesionOpen(true)}
-              className="cursor-pointer group relative overflow-hidden flex items-center gap-1.5 px-4 py-2 border-2 border-amber-400 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl text-[10px] sm:text-xs font-black text-slate-950 transition-all duration-150 active:scale-95 shadow-md animate-pulse"
-              style={{ animationDuration: '4s' }}
+              className="cursor-pointer group hidden sm:inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-slate-400 hover:text-amber-400 transition-colors bg-transparent border-0 shadow-none p-0"
             >
-              <Crown className="w-3.5 h-3.5 text-slate-950" />
-              <span>¡QUIERO MI JUGADA MAESTRA!</span>
+              <Crown className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
+              <span className="border-b border-white/20 group-hover:border-amber-400/60 pb-0.5 transition-colors">
+                Jugada maestra
+              </span>
             </button>
 
-            {/* Icono de Campana con Badge */}
             <div className="relative">
               <div 
-                className="cursor-pointer p-2 hover:bg-slate-50 rounded-xl transition-all relative" 
+                className="cursor-pointer p-2 hover:bg-white/5 rounded-xl transition-all relative" 
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
               >
                 <span className="absolute top-1 right-1 bg-rose-600 text-white font-mono text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-black animate-bounce">
                   2
                 </span>
-                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
 
-              {/* Dynamic Notification Popover */}
               <AnimatePresence>
                 {notificationsOpen && (
                   <>
@@ -1128,50 +1349,47 @@ export default function App() {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 text-left space-y-3"
+                      className="absolute right-0 mt-2 w-80 app-dark-card-accent rounded-2xl shadow-xl p-4 z-50 text-left space-y-3"
                     >
-                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="text-xs font-black text-slate-900 uppercase">Notificaciones Recientes</span>
-                        <span className="text-[9px] font-bold text-[#355C7D] bg-blue-50 px-2 py-0.5 rounded-full uppercase">Activo</span>
+                      <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                        <span className="text-xs font-black text-white uppercase">Notificaciones Recientes</span>
+                        <span className="text-[9px] font-bold text-teal-300 bg-teal-500/15 border border-teal-500/30 px-2 py-0.5 rounded-full uppercase">Activo</span>
                       </div>
                       
                       <div className="space-y-2 text-xs">
-                        {/* Notification item 1 */}
                         <div 
                           onClick={() => {
                             setNotificationsOpen(false);
-                            setActiveTab("diagnostico");
-                            setActiveSubTab("estrategia");
+                            navigateToEstrategia();
                           }}
-                          className="p-2.5 hover:bg-slate-50 border border-transparent hover:border-amber-200 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
+                          className="p-2.5 hover:bg-white/5 border border-transparent hover:border-amber-500/30 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
                         >
                           <span className="text-lg">📊</span>
                           <div>
-                            <p className="font-bold text-slate-800">¡Auditoría de IA Lista!</p>
-                            <p className="text-[10px] text-slate-500 leading-normal">La Inteligencia Artificial ha analizado tu marca. Revisa el Modelo de Riqueza y Estrategia.</p>
+                            <p className="font-bold text-white">¡Auditoría de IA Lista!</p>
+                            <p className="text-[10px] text-slate-400 leading-normal">La Inteligencia Artificial ha analizado tu marca. Revisa el Modelo de Riqueza y Estrategia.</p>
                           </div>
                         </div>
 
-                        {/* Notification item 2 */}
                         <div 
                           onClick={() => {
                             setNotificationsOpen(false);
                             setAgendarSesionOpen(true);
                           }}
-                          className="p-2.5 hover:bg-slate-50 border border-transparent hover:border-amber-200 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
+                          className="p-2.5 hover:bg-white/5 border border-transparent hover:border-amber-500/30 rounded-xl transition-all cursor-pointer flex items-start gap-2.5"
                         >
                           <span className="text-lg">👑</span>
                           <div>
-                            <p className="font-bold text-slate-800">Cita estratégica disponible</p>
-                            <p className="text-[10px] text-slate-500 leading-normal">Tienes 3 créditos libres para agendar tu mentoría 1:1 directa con Adri.</p>
+                            <p className="font-bold text-white">Cita estratégica disponible</p>
+                            <p className="text-[10px] text-slate-400 leading-normal">Tienes 3 créditos libres para agendar tu mentoría 1:1 directa con Adri.</p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex justify-end">
+                      <div className="pt-2 border-t border-white/10 flex justify-end">
                         <button 
                           onClick={() => setNotificationsOpen(false)}
-                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase"
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-300 uppercase cursor-pointer"
                         >
                           Cerrar panel
                         </button>
@@ -1182,159 +1400,201 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            {/* Profile Avatar Widget */}
             <div 
               onClick={() => setSobreMiOpen(true)}
-              className="flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100 border border-slate-100/60 p-1.5 pr-3 rounded-full cursor-pointer select-none transition-all"
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 p-1.5 pr-3 rounded-full cursor-pointer select-none transition-all"
             >
-              <div className="w-7 h-7 rounded-full bg-[#355C7D] text-white flex items-center justify-center font-serif font-black text-xs">
+              <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-serif font-black text-xs">
                 A
               </div>
               <div className="hidden lg:flex flex-col text-left leading-none">
-                <span className="text-[11px] font-black text-[#1F354D]">Adriana Mentora</span>
+                <span className="text-[11px] font-black text-white">Adriana Mentora</span>
               </div>
               <ChevronLeft className="w-3.5 h-3.5 text-slate-500 rotate-270" />
             </div>
           </div>
         </header>
 
-        {/* CONTENIDO INTERACTIVO BAJO LA CABECERA (RÉPLICA DE LA IMAGEN DE REFERENCIA CON BORDER DORADO) */}
-        <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-8 animate-fadeIn relative z-10">
-
-          {/* TWO HERO HERO BANNERS: CHESS STRATEGY AND AVAILABLE CREDITS */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-            
-            {/* 1. MAIN BANNER: CHESS WEALTH STRATEGY */}
-            <div 
-              className="lg:col-span-3 rounded-3xl p-6 sm:p-8 border-2 border-amber-300 shadow-xl overflow-hidden relative flex flex-col justify-between min-h-[300px] transition-all duration-300 hover:shadow-2xl"
-              style={{
-                backgroundImage: `linear-gradient(to right, #0b1530 0%, rgba(11, 21, 48, 0.95) 35%, rgba(26, 37, 76, 0.75) 65%, rgba(245, 158, 11, 0.15) 100%), url('${chessStrategyImg}')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
+        {/* Menú móvil desplegable */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden bg-[#0a1018] border-b border-white/5 px-4 py-3 z-20 overflow-hidden"
             >
-              {/* Gold glow top corner */}
-              <div className="absolute top-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full filter blur-3xl pointer-events-none" />
-              
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10 h-full items-center">
-                
-                {/* Left side text column */}
-                <div className="md:col-span-7 space-y-4 text-left">
-                  <div className="inline-flex items-center gap-2.5 bg-amber-500/10 border border-amber-500/35 px-3 py-1 rounded-full">
-                    <span className="text-amber-400 animate-pulse">✦</span>
-                    <span className="text-[9px] text-amber-300 uppercase font-mono tracking-widest font-black leading-none">
-                      ESTRATEGIA CIENTÍFICA 🔬♟️
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Inicio", action: () => navigateToDiagnostico("resumen"), active: activeTab === "diagnostico" && activeSubTab === "resumen" },
+                  { label: "Diagnóstico", action: navigateToAnalisis, active: activeTab === "diagnostico" && activeSubTab === "analisis" },
+                  { label: "Estrategia", action: navigateToEstrategia, active: activeTab === "diagnostico" && activeSubTab === "estrategia" },
+                  { label: "Seguimiento", action: navigateToSeguimiento, active: activeTab === "seguimiento" },
+                  { label: "Plantillas", action: navigateToEjemplos, active: activeTab === "ejemplos" },
+                  { label: "Recursos", action: () => { setRecursosOpen(true); setMobileMenuOpen(false); }, active: false },
+                  { label: "Comunidad", action: () => { setComunidadOpen(true); setMobileMenuOpen(false); }, active: false },
+                  { label: "Ajustes", action: () => { setAreaPremiumOpen(true); setMobileMenuOpen(false); }, active: false },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={item.action}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      item.active ? "bg-amber-500/20 text-amber-200 border border-amber-500/40" : "text-slate-300 hover:bg-slate-800/50"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CONTENIDO INTERACTIVO BAJO LA CABECERA (RÉPLICA DE LA IMAGEN DE REFERENCIA CON BORDER DORADO) */}
+        <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-8 animate-fadeIn relative z-10 pb-24 lg:pb-8">
+
+          {/* HERO Y NAVEGACIÓN — solo en flujo de diagnóstico (no en landing ni análisis) */}
+          {activeTab === "diagnostico" && activeSubTab !== "resumen" && !["analisis", "sitioweb", "marketing", "mentoria"].includes(activeSubTab) && (
+          <>
+          {/* HERO PREMIUM — legibilidad + divisiones estilizadas */}
+          <div className="relative rounded-[2rem] overflow-hidden min-h-[320px] shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-[#C9A87C]/15">
+            {/* Fondo ajedrez — más visible */}
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url('${chessHeroBackground}')` }}
+              aria-hidden="true"
+            />
+            {/* Velo sutil — deja ver la foto sin taparla con beige */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(135deg, rgba(12, 18, 32, 0.28) 0%, rgba(20, 14, 10, 0.12) 45%, rgba(8, 12, 22, 0.32) 100%)",
+              }}
+              aria-hidden="true"
+            />
+            {/* Borde interior decorativo */}
+            <div className="absolute inset-3 sm:inset-4 rounded-[1.5rem] border border-[#C9A87C]/20 pointer-events-none" aria-hidden="true" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 max-w-md divider-ornament-h" aria-hidden="true" />
+
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-0 items-stretch">
+            
+            {/* Contenido principal */}
+            <div className="lg:col-span-3 p-5 sm:p-8 lg:p-10 flex flex-col justify-center">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-stretch">
+                {/* Columna de texto — panel legible */}
+                <div className="md:col-span-7 hero-readability-panel rounded-2xl p-6 sm:p-7 space-y-5 text-left">
+                  <div className="flex items-center gap-3">
+                    <span className="hero-glass-badge text-[9px] uppercase font-mono tracking-[0.18em] font-black px-3 py-1.5 rounded-full">
+                      ✦ Estrategia científica · ♟️
                     </span>
                   </div>
 
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-white leading-[1.2] tracking-tight">
-                    ¿Tu negocio es un <span className="text-amber-400 font-black underline decoration-amber-400/50 underline-offset-4">hobby</span>... <br/>
-                    o una máquina de <span className="text-[#EAD293] font-black">generar riqueza?</span>
+                  <h1 className="text-2xl sm:text-3xl lg:text-[2.35rem] font-serif font-black text-winner leading-[1.12] tracking-tight">
+                    ¿Tu negocio es un <span className="text-gold-accent italic font-black">hobby</span>... <br/>
+                    o una máquina de <span className="text-gold-accent font-black">generar riqueza?</span>
                   </h1>
 
-                  <p className="text-slate-300 text-xs sm:text-[13px] leading-relaxed max-w-md font-sans font-semibold">
-                    Descubre si tu negocio está listo para crecer, vender y escalar con estrategia. Solicita una auditoría instantánea para posicionar tu marca hoy.
+                  <p className="text-winner-muted text-sm sm:text-[15px] leading-relaxed max-w-md font-sans font-semibold">
+                    Diseñado para emprendedores que juegan en serio. Descubre fugas, optimiza tu modelo y escala con una auditoría estratégica al instante.
                   </p>
 
-                  <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    {/* MASTER MOVE (CALENDAR) BUTTON */}
+                  <div className="divider-ornament-h w-full max-w-xs" />
+
+                  {/* CTAs premium — integrales pero con alto contraste */}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-y-3 gap-x-10 pt-1">
                     <button
                       onClick={() => setAgendarSesionOpen(true)}
                       type="button"
-                      className="cursor-pointer group relative px-5 py-3 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 flex items-center justify-center gap-2 font-sans animate-bounce"
-                      style={{ animationDuration: '3.5s' }}
+                      className="cursor-pointer group inline-flex items-center gap-2.5 text-[#faf6ef] hover:text-[#f5d78e] text-xs font-black uppercase tracking-[0.14em] transition-colors bg-transparent border-0 shadow-none p-0"
                     >
-                      <Crown className="w-4 h-4 text-slate-950" />
-                      <span>♟️ ¡QUIERO MI JUGADA MAESTRA! 🚀</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-950 group-hover:translate-x-1 transition-transform" />
+                      <Crown className="w-4 h-4 text-[#e8c547] group-hover:scale-110 transition-transform" />
+                      <span className="border-b-2 border-[#C9A87C]/50 group-hover:border-[#e8c547] pb-1 transition-colors">
+                        Quiero mi jugada maestra
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-[#e8c547] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                     </button>
 
-                    {/* LED-PULSING FREE AUDIT BUTTON */}
                     <button
-                      onClick={() => {
-                        setActiveTab("diagnostico");
-                        setActiveSubTab("analisis");
-                        setTimeout(() => {
-                          const el = document.getElementById("auth-diagnosis-form");
-                          if (el) {
-                            el.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }
-                        }, 100);
-                      }}
+                      onClick={navigateToAnalisis}
                       type="button"
-                      className="cursor-pointer group relative px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.6)] hover:shadow-[0_0_25px_rgba(16,185,129,0.9)] border-2 border-emerald-400/40 transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 font-sans animate-bounce"
-                      style={{ animationDuration: '2s' }}
+                      className="cursor-pointer group inline-flex items-center gap-2.5 text-[#e8ede4] hover:text-[#c5ddb8] text-xs font-black uppercase tracking-[0.14em] transition-colors bg-transparent border-0 shadow-none p-0"
                     >
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-80"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+                      <Sparkles className="w-4 h-4 text-[#a8c49a] group-hover:scale-110 transition-transform" />
+                      <span className="border-b-2 border-[#9bb08a]/50 group-hover:border-[#a8c49a] pb-1 transition-colors">
+                        Auditoría gratis
                       </span>
-                      <span>🎁 ¡QUIERO MI AUDITORÍA GRATIS! ⭐</span>
+                      <ArrowRight className="w-4 h-4 text-[#a8c49a] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                     </button>
                   </div>
                 </div>
 
-                {/* Right side checklist card overlay */}
-                <div className="md:col-span-5 bg-[#0B1530]/90 backdrop-blur-md rounded-2xl border-2 border-amber-300 p-4 sm:p-5 text-white shadow-xl space-y-3">
-                  <h4 className="text-[11px] uppercase tracking-wider text-amber-300 font-extrabold font-sans leading-none pb-2 border-b border-white/10">
-                    Lo que te llevas con tu diagnóstico:
-                  </h4>
-                  <ul className="space-y-2.5 text-[11.5px] font-sans">
-                    {[
-                      "Claridad sobre tu modelo de negocio",
-                      "Puntos ciegos y fugas detectadas",
-                      "Acciones prioritarias para vender más",
-                      "Ruta de crecimiento con enfoque real"
-                    ].map((item, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <span className="text-amber-100/90 font-extrabold">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                {/* Beneficios — panel + divisor ornamental */}
+                <div className="md:col-span-5 flex gap-5 md:gap-0">
+                  <div className="hidden md:flex flex-col items-center justify-center px-1 shrink-0">
+                    <div className="divider-ornament-v flex-1 min-h-[60px]" />
+                    <span className="text-[#C9A87C] text-[10px] my-2 select-none">◆</span>
+                    <div className="divider-ornament-v flex-1 min-h-[60px]" />
+                  </div>
+                  <div className="hero-readability-panel rounded-2xl p-6 sm:p-7 flex-1 space-y-4">
+                    <h4 className="text-[10px] uppercase tracking-[0.2em] text-[#d4c4a8] font-black font-sans flex items-center gap-2">
+                      <span className="w-6 h-px bg-gradient-to-r from-[#C9A87C] to-transparent" />
+                      Tu diagnóstico incluye
+                    </h4>
+                    <ul className="space-y-3.5 text-[13px] font-sans">
+                      {[
+                        "Claridad sobre tu modelo de negocio",
+                        "Puntos ciegos y fugas detectadas",
+                        "Acciones prioritarias para vender más",
+                        "Ruta de crecimiento con enfoque real"
+                      ].map((item, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#C9A87C] to-[#A67C52] flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                            <Check className="w-3 h-3 text-white stroke-[3]" />
+                          </span>
+                          <span className="text-[#f5f0e6] font-bold leading-snug">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
               </div>
             </div>
 
-            {/* 2. SECONDARY BANNER: CREDITS & IA RELOADER (RÉPLICA FIEL) */}
-            <div className="bg-[#FAF6EE] rounded-3xl p-6 border-2 border-[#EAD293] shadow-md flex flex-col justify-between items-center text-center relative overflow-hidden transition-all duration-300 hover:shadow-lg">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
-              
-              <div className="w-full">
-                <span className="text-[9px] text-[#a16207] uppercase font-mono tracking-widest font-black bg-[#EAD293]/20 px-3 py-1 rounded-lg border border-[#EAD293]/35 inline-block">
-                  AUDITORÍAS DISPONIBLES
-                </span>
-              </div>
-
-              {/* Laurel branch and credits count replica */}
-              <div className="flex items-center justify-center gap-3.5 my-3">
-                {/* Left laurel branch */}
-                <svg className="w-8 h-12 text-amber-600/60" viewBox="0 0 24 36" fill="currentColor">
-                  <path d="M10 4s-1.5-2-3-2c-2 0-3 1.5-3 3 0 4 3.5 9 6 12M10 10s-1.5-1.5-2.5-1.5-2 1-2 2c0 3 2.5 6 4.5 8M10 16s-1-1-2-1c-1.5 0-2 .5-2 1.5 0 2 2 4 4 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                </svg>
-                
-                <span className="text-6xl font-serif font-black text-[#0B1530] tracking-tight leading-none">
-                  {credits}
-                </span>
-                
-                {/* Right laurel branch */}
-                <svg className="w-8 h-12 text-amber-600/60 scale-x-[-1]" viewBox="0 0 24 36" fill="currentColor">
-                  <path d="M10 4s-1.5-2-3-2c-2 0-3 1.5-3 3 0 4 3.5 9 6 12M10 10s-1.5-1.5-2.5-1.5-2 1-2 2c0 3 2.5 6 4.5 8M10 16s-1-1-2-1c-1.5 0-2 .5-2 1.5 0 2 2 4 4 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-                </svg>
-              </div>
-
-              <div className="w-full space-y-2">
-                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider font-mono">
-                  auditorías gratuitas
+            {/* Créditos — columna premium */}
+            <div className="lg:col-span-1 flex flex-col justify-center items-center text-center px-6 py-8 lg:py-10 relative">
+              <div className="hidden lg:block absolute left-0 top-[12%] bottom-[12%] divider-ornament-v" aria-hidden="true" />
+              <div className="hero-readability-panel rounded-2xl p-6 w-full max-w-[200px] mx-auto space-y-3">
+                <Crown className="w-5 h-5 text-[#e8c547] mx-auto opacity-90" />
+                <p className="text-[9px] text-[#d4c4a8] uppercase font-mono tracking-[0.22em] font-black">
+                  Auditorías disponibles
                 </p>
+
+                <div className="flex items-center justify-center gap-2 py-1">
+                  <svg className="w-6 h-9 text-[#C9A87C]/60" viewBox="0 0 24 36" fill="currentColor" aria-hidden="true">
+                    <path d="M10 4s-1.5-2-3-2c-2 0-3 1.5-3 3 0 4 3.5 9 6 12M10 10s-1.5-1.5-2.5-1.5-2 1-2 2c0 3 2.5 6 4.5 8M10 16s-1-1-2-1c-1.5 0-2 .5-2 1.5 0 2 2 4 4 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                  <span className="text-5xl sm:text-6xl font-serif font-black number-winner tracking-tight leading-none">
+                    {credits}
+                  </span>
+                  <svg className="w-6 h-9 text-[#C9A87C]/60 scale-x-[-1]" viewBox="0 0 24 36" fill="currentColor" aria-hidden="true">
+                    <path d="M10 4s-1.5-2-3-2c-2 0-3 1.5-3 3 0 4 3.5 9 6 12M10 10s-1.5-1.5-2.5-1.5-2 1-2 2c0 3 2.5 6 4.5 8M10 16s-1-1-2-1c-1.5 0-2 .5-2 1.5 0 2 2 4 4 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
+
+                <p className="text-[10px] text-[#d4c4a8] font-bold uppercase tracking-widest font-mono">
+                  gratuitas
+                </p>
+                
+                <div className="divider-ornament-h w-full" />
                 
                 <button
                   onClick={() => setAreaPremiumOpen(true)}
                   type="button"
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer font-mono"
+                  className="text-[10px] font-black uppercase tracking-wider text-[#e8c547] hover:text-[#faf6ef] transition-colors bg-transparent border-0 shadow-none cursor-pointer w-full"
                 >
-                  ACCESO PREMIUM GRATIS
+                  Acceso premium →
                 </button>
                 
                 <button
@@ -1344,79 +1604,75 @@ export default function App() {
                     setCopiedText("✨ ¡Créditos recargados! Tienes 3 auditorías de prueba listas.");
                     setTimeout(() => setCopiedText(null), 3000);
                   }}
-                  className="text-[9px] hover:underline text-amber-700 hover:text-amber-900 font-extrabold cursor-pointer flex items-center gap-1 justify-center mx-auto pt-1 font-mono uppercase tracking-wider leading-none"
+                  className="text-[9px] hover:underline text-[#d4c4a8] hover:text-[#faf6ef] font-bold cursor-pointer flex items-center gap-1 justify-center mx-auto font-mono uppercase tracking-wider leading-none"
                 >
-                  <RefreshCw className="w-3 h-3 text-amber-600" />
+                  <RefreshCw className="w-3 h-3 text-[#e8c547]" />
                   Reiniciar créditos gratis
                 </button>
               </div>
             </div>
 
+            </div>
           </div>
+          </>
+          )}
 
-          {/* HORIZONTAL TABBED MENU ROW (RÉPLICA DEL INTERFACE DE LA IMAGEN DE REFERENCIA - ULTRA VISUAL Y ACTIVA) */}
-          <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl border-2 border-amber-200 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl mb-8">
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center md:justify-start">
+          {/* Navegación entre secciones del diagnóstico */}
+          {activeTab === "diagnostico" && activeSubTab !== "resumen" && (
+          <div className="relative py-3 mb-8">
+            <div className="divider-ornament-h w-full absolute top-0" />
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4">
+            <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 w-full md:w-auto justify-center md:justify-start">
               {[
-                { id: "resumen", label: "Resumen", icon: Sparkles, color: "text-amber-500", desc: "Vista general" },
-                { id: "analisis", label: "Análisis", icon: FileText, color: "text-blue-500", desc: "Tus respuestas" },
-                { id: "estrategia", label: "Estrategia", icon: TrendingUp, color: "text-emerald-500", desc: "Modelo de Riqueza" },
-                { id: "sitioweb", label: "Sitio Web", icon: Monitor, color: "text-indigo-500", desc: "Optimización web" },
-                { id: "marketing", label: "Marketing", icon: Target, color: "text-rose-500", desc: "Plan de atracción" },
-                { id: "mentoria", label: "Mentoría", icon: Users, color: "text-violet-500", desc: "Acompañamiento" }
+                { id: "resumen", label: "Resumen", icon: Sparkles },
+                { id: "analisis", label: "Análisis", icon: FileText },
+                { id: "estrategia", label: "Estrategia", icon: TrendingUp },
+                { id: "sitioweb", label: "Sitio Web", icon: Monitor },
+                { id: "marketing", label: "Marketing", icon: Target },
+                { id: "mentoria", label: "Mentoría", icon: Users }
               ].map((tab) => {
                 const IconComponent = tab.icon;
                 const isActive = activeTab === "diagnostico" && activeSubTab === tab.id;
                 return (
                   <button
                     key={tab.id}
+                    data-active={isActive}
                     onClick={() => {
                       setActiveTab("diagnostico");
-                      setActiveSubTab(tab.id as any);
+                      setActiveSubTab(tab.id as SubTabId);
                     }}
-                    className={`group relative px-4 py-3 rounded-2xl transition-all duration-300 cursor-pointer flex items-center gap-3 border ${
+                    className={`nav-winner-tab group px-3 sm:px-5 py-3 transition-all duration-200 cursor-pointer flex items-center gap-2.5 bg-transparent border-0 shadow-none ${
                       isActive
-                        ? "bg-gradient-to-br from-[#1F354D] to-[#355C7D] text-white border-transparent shadow-lg scale-102"
-                        : "bg-slate-50/60 hover:bg-slate-100/90 text-slate-700 border-slate-200/60 hover:border-amber-300"
+                        ? "text-amber-400"
+                        : "text-slate-500 hover:text-slate-300"
                     }`}
                   >
-                    {/* Icon Container */}
-                    <div className={`p-2 rounded-xl transition-colors duration-300 ${
-                      isActive ? "bg-white/10" : "bg-white border border-slate-100 shadow-xs"
-                    }`}>
-                      <IconComponent className={`w-4 h-4 ${isActive ? "text-amber-300 animate-pulse" : tab.color}`} />
-                    </div>
-
-                    {/* Text block */}
-                    <div className="text-left leading-none">
-                      <div className={`text-xs font-black tracking-tight ${isActive ? "text-white" : "text-slate-900"}`}>
-                        {tab.label}
-                      </div>
-                      <div className={`text-[9px] mt-0.5 font-medium ${isActive ? "text-slate-300" : "text-slate-400 group-hover:text-slate-500"}`}>
-                        {tab.desc}
-                      </div>
-                    </div>
-
-                    {/* Active highlight dot */}
-                    {isActive && (
-                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                      </span>
-                    )}
+                    <IconComponent className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-amber-400" : "text-slate-600 group-hover:text-slate-400"}`} />
+                    <span className={`text-xs sm:text-[13px] font-bold tracking-wide font-sans ${isActive ? "font-black text-white" : ""}`}>
+                      {tab.label}
+                    </span>
                   </button>
                 );
               })}
             </div>
             
-            <div className="hidden lg:flex items-center gap-3 pr-3 py-1.5 px-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-[10px] font-bold text-emerald-800">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-mono uppercase tracking-wider">Módulo de Autodiagnóstico Activo</span>
+            <div className="hidden lg:flex items-center gap-2.5 app-badge-gold text-[10px] font-bold px-4 py-2 rounded-full">
+              <Crown className="w-3.5 h-3.5" />
+              <span className="font-mono uppercase tracking-wider">Motor IA activo</span>
             </div>
+            </div>
+            <div className="divider-ornament-h w-full absolute bottom-0" />
           </div>
+          )}
+
+          {/* Encabezado de secciones fuera del flujo de diagnóstico */}
+          {activeTab === "ejemplos" && (
+            <div className="app-dark-card-accent p-5 sm:p-6 rounded-2xl">
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Carga un caso de ejemplo para ver cómo la IA transforma bloqueos en estrategias accionables al instante.
+              </p>
+            </div>
+          )}
 
           {/* ALERTA DE COPIADO */}
           <AnimatePresence>
@@ -1448,898 +1704,314 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          {/* CONTENIDO DE LAS SUB-PESTAÑAS DINÁMICAS */}
-          {activeTab === "diagnostico" && activeSubTab === "resumen" && (
-            <div className="space-y-6">
-              
-              {/* COMPLEMENTO: ESPECTACULAR CUADRO DE AUDITORÍA GRATIS INTERACTIVO */}
-              <div className="bg-gradient-to-r from-[#FFFDF9] via-white to-[#F3F7FA] rounded-3xl border-2 border-[#EAD293] p-6 sm:p-8 shadow-md shadow-amber-100/50 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full filter blur-2xl pointer-events-none" />
-                
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  
-                  {/* Left Column: Highly Persuasive Text and Value Props */}
-                  <div className="lg:col-span-5 space-y-5">
-                    <div className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-250 px-3 py-1 rounded-full text-[9px] text-amber-850 uppercase font-mono font-black animate-pulse">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>🎁 Regalo de Adriana Mentora • Valorado en €497</span>
-                    </div>
-                    
-                    <h2 className="text-2xl sm:text-3xl font-serif font-black text-[#1F354D] leading-tight">
-                      ♟️ ¡QUIERO MI AUDITORÍA GRATIS! ⭐
-                    </h2>
-                    
-                    <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                      Completa este test veloz de 15 segundos. La Inteligencia Artificial <span className="text-[#355C7D] font-bold">del Consultor Virtual</span> analizará al instante las fugas de flujo de caja en tu negocio local, rediseñará tu modelo comercial y te entregará una hoja de ruta de crecimiento innegociable.
+          {/* ANÁLISIS — panel unificado sin contenido duplicado */}
+          {activeTab === "diagnostico" && activeSubTab === "analisis" && (
+            <div className="space-y-8">
+
+              {/* Contexto: un solo encabezado con créditos */}
+              <div className="app-dark-card rounded-2xl p-5 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-400 font-mono font-black mb-1">Análisis · Paso 1 de 2</p>
+                    <h2 className="text-xl sm:text-2xl font-serif font-black text-white">Autodiagnóstico de tu negocio</h2>
+                    <p className="text-xs text-slate-400 mt-1.5 max-w-xl leading-relaxed">
+                      Completa el formulario para activar tu panel personalizado y la estrategia generada por IA.
                     </p>
-                    
-                    {/* Key Core Bullet Points */}
-                    <div className="space-y-3.5 pt-2">
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                      <Crown className="w-4 h-4 text-amber-400" />
+                      <span className="text-lg font-serif font-black text-white">{credits}</span>
+                      <span className="text-[10px] text-slate-400 font-mono uppercase">auditorías</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById("auth-diagnosis-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a0f18] text-[11px] font-black uppercase tracking-wider rounded-xl hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Ir al formulario
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vista previa del panel MiniLabMentor — superficie unificada */}
+              <div className="workspace-shell rounded-[28px] shadow-2xl p-4 sm:p-6">
+                <div className="workspace-surface rounded-2xl p-4 sm:p-5 space-y-4">
+
+                  <div className="flex items-center justify-between border-b border-[#806B78]/15 pb-3">
+                    <div>
+                      <span className="font-serif font-black text-sm text-[#355C7D]">MiniLabMentor</span>
+                      <h3 className="text-base font-bold text-[#3C1A2F] mt-0.5">
+                        Panel de {businessName}
+                      </h3>
+                      <p className="text-[10px] text-[#806B78] mt-0.5">Vista previa · se activa al completar el diagnóstico</p>
+                    </div>
+                    <div
+                      className="flex items-center gap-1.5 bg-amber-100/40 border border-amber-200/40 px-2 py-0.5 rounded-full select-none cursor-pointer"
+                      onClick={() => setAreaPremiumOpen(true)}
+                    >
+                      <Crown className="w-2.5 h-2.5 text-amber-600" />
+                      <span className="text-[8.5px] uppercase font-mono font-extrabold text-amber-700">Premium</span>
+                      <div className="w-4 h-4 rounded-full bg-[#355C7D] text-white flex items-center justify-center text-[8px] font-black uppercase">U</div>
+                    </div>
+                  </div>
+
+                  {/* Métricas clave */}
+                  <div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                       {[
-                        { title: "Mapeo de Fugas de Capital", text: "Detecta exactamente dónde estás perdiendo clientes y ventas.", icon: TrendingUp, iconColor: "text-amber-500" },
-                        { title: "Estructura de Ofertas Élite", text: "Multiplica el valor percibido de tus servicios locales.", icon: Award, iconColor: "text-[#355C7D]" },
-                        { title: "Estrategia Reptil de Ventas", text: "Hooks y argumentos listos para usar basados en instintos básicos.", icon: Flame, iconColor: "text-orange-500" },
-                        { title: "Plan Operativo de 7 Días", text: "Acciones estructuradas día por día para captar caja de inmediato.", icon: CheckCircle2, iconColor: "text-emerald-500" },
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex gap-3 items-start text-left">
-                          <div className={`p-1.5 rounded-lg bg-slate-50 border border-slate-150 ${item.iconColor} shrink-0`}>
-                            <item.icon className="w-3.5 h-3.5" />
+                        { label: "Tráfico orgánico", value: "12.8K", delta: "+28%", color: "stroke-amber-500", path: "M0,25 Q15,10 30,22 T60,5 T90,12 T100,2" },
+                        { label: "Tasa conversión", value: calcConversion > 0 ? `${calcConversion}%` : "3.6%", delta: "+42%", color: "stroke-emerald-500", path: "M0,28 L20,20 L40,24 L60,10 L80,14 L100,3" },
+                        {
+                          label: "Ingresos netos",
+                          value: calcPrice * calcLeads * (calcConversion / 100) > 0
+                            ? `€${((calcPrice * calcLeads * (calcConversion / 100)) / 1000).toFixed(1)}K`
+                            : "€24.6K",
+                          delta: "+35%",
+                          color: "stroke-[#A06283]",
+                          path: "M0,25 Q20,5 40,20 T80,10 T100,2",
+                        },
+                        { label: "Clientes nuevos", value: calcLeads > 0 ? String(calcLeads) : "156", delta: "+31%", color: "stroke-blue-500", path: "M0,20 L25,12 L50,18 L75,5 L100,8" },
+                      ].map((metric) => (
+                        <div key={metric.label} className="workspace-card p-2.5 rounded-xl">
+                          <span className="text-[8px] text-[#806B78] uppercase font-bold tracking-wider font-mono">{metric.label}</span>
+                          <div className="flex items-baseline gap-1 mt-0.5">
+                            <span className="text-sm font-bold font-serif text-[#3C1A2F]">{metric.value}</span>
+                            <span className="text-[7.5px] text-emerald-600 font-bold">{metric.delta}</span>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-black text-slate-800 leading-tight">{item.title}</h4>
-                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{item.text}</p>
+                          <div className="mt-1 h-5 flex items-end">
+                            <svg viewBox="0 0 100 30" className={`w-full h-full ${metric.color} stroke-2 fill-none overflow-visible`}>
+                              <path d={metric.path} />
+                            </svg>
                           </div>
                         </div>
                       ))}
                     </div>
+                    <p className="text-[8px] text-[#806B78]/70 text-right mt-1 font-mono uppercase tracking-wider">
+                      Variación vs. mes anterior
+                    </p>
+                  </div>
 
-                    <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
-                      <span className="text-[9px] font-bold font-mono text-slate-400 uppercase tracking-widest">MINILABMENTOR • HOJA DE RUTA EXCLUSIVA</span>
+                  {/* Salud + prioridades */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="workspace-card p-4 rounded-2xl flex flex-col items-center text-center">
+                      <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide self-start w-full text-left">Salud del negocio</h5>
+                      <div className="my-2.5 relative flex items-center justify-center">
+                        <svg className="w-20 h-20 transform -rotate-90">
+                          <circle cx="40" cy="40" r="32" stroke="rgba(128,107,120,0.15)" strokeWidth="6" fill="transparent" />
+                          <circle
+                            cx="40"
+                            cy="40"
+                            r="32"
+                            stroke="url(#gradientMalva)"
+                            strokeWidth="6"
+                            fill="transparent"
+                            strokeDasharray="201"
+                            strokeDashoffset="26"
+                          />
+                          <defs>
+                            <linearGradient id="gradientMalva" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#355C7D" />
+                              <stop offset="100%" stopColor="#EE6596" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="absolute flex flex-col items-center">
+                          <span className="text-lg font-serif font-black text-[#355C7D]">87</span>
+                          <span className="text-[7px] text-[#806B78] font-bold uppercase tracking-wider -mt-1">/ 100</span>
+                        </div>
+                      </div>
+                      <p className="text-[9px] text-[#806B78] leading-snug px-2">
+                        Buen punto de partida. El diagnóstico revelará dónde escalar con más impacto.
+                      </p>
+                      <button
+                        onClick={navigateToEstrategia}
+                        type="button"
+                        className="mt-3 w-full py-1.5 bg-[#355C7D] hover:bg-[#6D3254] text-white text-[8.5px] font-black uppercase tracking-widest rounded-lg transition-all"
+                      >
+                        Ver estrategia completa
+                      </button>
+                    </div>
+
+                    <div className="workspace-card p-4 rounded-2xl flex flex-col justify-between">
+                      <div>
+                        <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide mb-2.5">Próximas prioridades</h5>
+                        <div className="space-y-2 text-left">
+                          {[
+                            "Optimizar embudo de conversión",
+                            "Mejorar visibilidad orgánica (SEO)",
+                            "Automatizar seguimiento de leads",
+                          ].map((item) => (
+                            <div key={item} className="flex items-center gap-2 text-[9px] text-[#3C1A2F] font-bold">
+                              <span className="w-3.5 h-3.5 rounded-full bg-emerald-100/60 text-emerald-700 flex items-center justify-center text-[7px] font-black">✓</span>
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={navigateToEstrategia}
+                        type="button"
+                        className="mt-4 text-left text-[9px] text-[#355C7D] hover:text-[#DFC07F] transition-colors font-extrabold flex items-center gap-1"
+                      >
+                        Ver plan detallado <ChevronRight className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Right Column: Direct Interactive Diagnostics Form */}
-                  <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-150 p-5 sm:p-6 shadow-sm relative">
-                    <span className="absolute top-3 right-3 text-[8.5px] font-mono font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                      ✓ Canal Seguro de IA Activo
-                    </span>
-                    
-                    <h3 className="text-xs font-extrabold text-slate-705 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex items-center gap-1">
-                      <Briefcase className="w-3.5 h-3.5 text-[#355C7D]" />
-                      Ingresa los Datos de tu Negocio
-                    </h3>
+                </div>
+              </div>
 
-                    <form onSubmit={(e) => handleCreatePlan(e, false)} className="space-y-4">
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* BUSINESS NAME */}
-                        <div className="space-y-1">
-                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
-                            🏪 Nombre de tu Negocio <span className="text-amber-600">*</span>
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            value={businessName}
-                            onChange={(e) => setBusinessName(e.target.value)}
-                            className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
-                            placeholder="Ej: Cafetería Aromas"
-                          />
-                        </div>
+              {/* Formulario de diagnóstico */}
+              <div id="auth-diagnosis-form" className="max-w-4xl mx-auto space-y-4">
+                <div className="text-center space-y-1">
+                  <h3 className="text-lg font-serif font-bold text-white">Paso 2 · Completa tu diagnóstico</h3>
+                  <p className="text-xs text-slate-400">3 minutos · Resultados instantáneos con IA</p>
+                </div>
 
-                        {/* MARKET NICHE */}
-                        <div className="space-y-1">
-                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
-                            🎯 Nicho de Mercado o Sector <span className="text-amber-600">*</span>
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            value={niche}
-                            onChange={(e) => setNiche(e.target.value)}
-                            className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
-                            placeholder="Ej: Estética, Pastelería"
-                          />
-                        </div>
-                      </div>
+                <div className="app-dark-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                  <form onSubmit={(e) => handleCreatePlan(e, false)} className="space-y-6">
 
-                      {/* USER EMAIL */}
-                      <div className="space-y-1 bg-amber-50/40 p-3.5 rounded-xl border border-amber-200/50">
-                        <label className="block text-sm sm:text-[15px] font-black text-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                          <span>📧 Tu Correo Electrónico <span className="text-amber-600">*</span></span>
-                          <span className="text-[10px] sm:text-xs uppercase font-mono font-bold text-[#355C7D]">Para enviarte el PDF</span>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-white/10">
+                      <span className="text-[11px] font-bold text-slate-400 font-sans">
+                        Negocio: <strong className="text-amber-300">{businessName.trim() ? businessName : "Sin nombre"}</strong>
+                      </span>
+                      {(businessName.trim() || niche.trim() || problema.trim()) && (
+                        <button
+                          type="button"
+                          onClick={handleNewAnalysis}
+                          className="cursor-pointer text-[10.5px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 px-3 py-1.5 rounded-lg border border-rose-500/30 transition-colors font-black flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Limpiar datos
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-black text-slate-200 mb-2 font-sans">
+                          Nombre de tu negocio <span className="text-amber-400">*</span>
                         </label>
                         <input
                           required
-                          type="email"
-                          value={userEmail}
-                          onChange={(e) => setUserEmail(e.target.value)}
-                          className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
-                          placeholder="tu-correo@ejemplo.com"
+                          type="text"
+                          className="w-full app-dark-input rounded-xl px-4 py-3 text-sm font-semibold transition-all placeholder-slate-500"
+                          placeholder="Ej: Cafetería Aromas"
+                          value={businessName}
+                          onChange={(e) => setBusinessName(e.target.value)}
                         />
                       </div>
-
-                      {/* PROBLEM / OBSTACLE DESCRIPTION */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center">
-                          <label className="block text-sm sm:text-[15px] font-black text-slate-800">
-                            ⚠️ ¿Cuál es tu bloqueo o problema principal? <span className="text-amber-600">*</span>
-                          </label>
-                          {/* QUICK SUGGESTIONS TRIGGER */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setProblema("Mis clientes dicen que mis servicios son caros y no logro agendar llamadas de ventas de manera constante para mi pastelería.");
-                              setBusinessName("Pasteles Dulce Arte");
-                              setNiche("Pastelería Artesanal");
-                            }}
-                            className="text-xs text-[#355C7D] hover:underline font-bold"
-                          >
-                            🪄 Rellenar ejemplo
-                          </button>
-                        </div>
-                        <textarea
-                          required
-                          rows={3}
-                          value={problema}
-                          onChange={(e) => setProblema(e.target.value)}
-                          className="w-full bg-white border border-slate-250 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 leading-normal"
-                          placeholder="Ej: No consigo agendar llamadas estables, o mis clientes se quejan de las tarifas y no gano lo suficiente..."
-                        />
-                      </div>
-
-                      {/* ACTION PILLS - ONLY ONE STRONG BUTTON */}
-                      <div className="pt-2">
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className="w-full py-4 bg-[#355C7D] hover:bg-[#2C4E6D] text-[#EAD293] text-sm sm:text-base font-black uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
-                        >
-                          {isLoading ? (
-                            <>
-                              <RefreshCw className="w-5 h-5 text-[#EAD293] animate-spin" />
-                              <span className="animate-pulse text-xs sm:text-sm">ANALIZANDO SI TIENES UN HOBBY O UNA MAQUINA DE RIQUEZA</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
-                              <span className="text-sm sm:text-base">Generar Mi Auditoría Gratis</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                    </form>
-                  </div>
-
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              
-              {/* PANEL DE MÉTRICAS (3/4 de la grid) */}
-              <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-50">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-[#0B1530] uppercase tracking-wide">
-                        Resumen de tu negocio
-                      </h3>
-                      <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm" />
-                    </div>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Visión general de tu crecimiento y metas financieras
-                    </p>
-                  </div>
-                  
-                  {/* Dropdown 30 días */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Últimos 30 días</span>
-                  </div>
-                </div>
-
-                {/* Grid de 4 tarjetas de métricas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { 
-                      label: "TRÁFICO ORGÁNICO", 
-                      value: "12.8K", 
-                      change: "+28%", 
-                      color: "emerald",
-                      spark: "M 0 15 Q 10 5, 20 20 T 40 8 T 60 12 T 80 3" 
-                    },
-                    { 
-                      label: "TASA DE CONVERSIÓN", 
-                      value: `${calcConversion}%`, 
-                      change: "+42%", 
-                      color: "emerald",
-                      spark: "M 0 18 Q 10 22, 20 12 T 40 5 T 60 15 T 80 2" 
-                    },
-                    { 
-                      label: "INGRESOS NETOS", 
-                      value: `€${((calcPrice * calcLeads * (calcConversion / 100)) / 10).toFixed(1)}K`, 
-                      change: "+35%", 
-                      color: "purple",
-                      spark: "M 0 20 Q 15 10, 30 18 T 60 4 T 80 1" 
-                    },
-                    { 
-                      label: "CLIENTES NUEVOS", 
-                      value: `${calcLeads}`, 
-                      change: "+31%", 
-                      color: "blue",
-                      spark: "M 0 15 Q 15 25, 30 10 T 60 8 T 80 4" 
-                    }
-                  ].map((metric) => (
-                    <div key={metric.label} className="bg-slate-50/60 hover:bg-slate-50 border border-slate-100 p-4 rounded-2xl flex flex-col justify-between h-36 transition-all duration-150">
                       <div>
-                        <span className="text-[9px] font-extrabold text-slate-400 tracking-wider font-mono">
-                          {metric.label}
-                        </span>
-                        <div className="flex items-baseline gap-1.5 mt-1">
-                          <span className="text-2xl font-black text-[#0B1530] tracking-tight font-serif">
-                            {metric.value}
-                          </span>
-                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                            metric.color === "emerald" ? "bg-emerald-50 text-emerald-600" :
-                            metric.color === "purple" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
-                          }`}>
-                            {metric.change}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Sparkline chart render */}
-                      <div className="h-10 w-full mt-3 overflow-hidden">
-                        <svg className="w-full h-full" viewBox="0 0 80 25">
-                          <path 
-                            d={metric.spark} 
-                            fill="none" 
-                            stroke={metric.color === "emerald" ? "#10b981" : metric.color === "purple" ? "#a855f7" : "#3b82f6"} 
-                            strokeWidth="2.5" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
-
-                      <div className="text-[8px] text-slate-400 font-bold tracking-wide mt-2">
-                        vs. mes anterior
+                        <label className="block text-sm font-black text-slate-200 mb-2">
+                          Nicho o sector <span className="text-amber-400">*</span>
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          className="w-full app-dark-input rounded-xl px-4 py-3 text-sm font-medium transition-all placeholder-slate-500 font-sans"
+                          placeholder="Ej: Pastelería artesanal"
+                          value={niche}
+                          onChange={(e) => setNiche(e.target.value)}
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Dashboard radial gauge or detail below metrics */}
-                <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-150 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="space-y-2 text-left">
-                    <h4 className="text-xs font-black text-[#0B1530] uppercase">
-                      Índice de Salud Financiera ({businessName})
-                    </h4>
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
-                      Tu negocio está operando con un margen saludable del 82%. Al incrementar el precio del ticket de venta o implementar los cierres consultivos, acelerarás el retorno de caja y habilitarás contrataciones de apoyo para delegar lo básico.
-                    </p>
-                  </div>
-                  
-                  {/* Gauge indicator */}
-                  <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="48" cy="48" r="40" stroke="#e2e8f0" strokeWidth="6" fill="transparent" />
-                      <circle cx="48" cy="48" r="40" stroke="#f59e0b" strokeWidth="6" fill="transparent" strokeDasharray="251.2" strokeDashoffset="45" strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute text-center">
-                      <span className="text-lg font-black text-[#0B1530] font-mono">82%</span>
-                      <p className="text-[8px] text-slate-400 uppercase font-black tracking-widest leading-none">Salud</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD ESTÁS EN EL CAMINO CORRECTO (1/4 de la grid) */}
-              <div className="bg-[#FAF9F6] border-2 border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-center items-center text-center space-y-4">
-                <div className="w-14 h-14 bg-amber-500/10 rounded-full border border-[#EAD293] flex items-center justify-center shadow-inner">
-                  <Crown className="w-6 h-6 text-amber-600" />
-                </div>
-                <div>
-                  <h4 className="text-md font-serif font-black text-[#0B1530]">
-                    Estás en el camino correcto.
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed mt-2 max-w-[210px] mx-auto font-medium">
-                    Sigue tomando decisiones estratégicas basadas en datos. Completa tu autodiagnóstico en la pestaña de al lado para activar tu plan guiado de 7 días.
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-          )}
-
-          {/* SECTION 1: CONSULTING AND DIAGNOSTICS GENERATOR (MODELED AFTER THE SAMPLE IMAGE WITH HIGH-FIDELITY MALVA, GOLD, AND LIGHT BLUE ACCENTS) */}
-          {activeTab === "diagnostico" && activeSubTab === "analisis" && (
-            <div className="space-y-12">
-              
-              {/* IMAGE MODELED GRID ROW: HERO COPY & LIVE DASHBOARD MOCKUP */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-2">
-                
-                {/* 1. LEFT SIDE: HERO PRESENTATION TEXT WITH PREMIUM BUTTONS */}
-                <div className="lg:col-span-5 flex flex-col justify-center space-y-6 text-left pr-2">
-                  <div className="inline-flex items-center gap-2.5 bg-[#FAF6F0] border border-[#EAD293]/50 px-4 py-1.5 rounded-full shadow-xs">
-                    <span className="text-amber-600">✦</span>
-                    <span className="text-[10px] text-[#7E3B60] uppercase font-mono tracking-widest font-black leading-none">
-                      ESTRATEGIA DIGITAL CON ELEGANCIA
-                    </span>
-                  </div>
-
-                  <h1 className="text-4xl sm:text-[44px] font-serif font-black text-[#3C1A2F] leading-[1.12] tracking-tight relative">
-                    Diseño webs que venden <br class="hidden sm:inline" />
-                    y <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A06283] via-[#D4AF37] to-[#8C5274] italic">estrategias</span> que <br class="hidden sm:inline" />
-                    impulsan tu crecimiento
-                  </h1>
-
-                  <p className="text-slate-600 text-[13.5px] leading-relaxed max-w-lg font-sans">
-                    Análisis personalizado, claridad estratégica y acompañamiento premium para emprendedores que quieren escalar con elegancia.
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-4 pt-2">
-                    {/* BUTTON 1: SOLICITA TU ANÁLISIS */}
-                    <button
-                      onClick={handleCardDiagnosisClick}
-                      type="button"
-                      className="group relative cursor-pointer px-7 py-3.5 bg-gradient-to-r from-[#355C7D] via-[#4A6D8C] to-[#5A7E9D] hover:from-[#2C4E6D] hover:to-[#DFC07F] text-white text-[12px] font-black uppercase tracking-wider rounded-full shadow-lg hover:shadow-purple-100 transition-all duration-300 transform active:scale-95 flex items-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4 text-[#EAD293] group-hover:rotate-12 transition-transform" />
-                      Solicita tu análisis
-                      <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
-                    </button>
-
-                    {/* BUTTON 2: DESCUBRE MIS SERVICIOS */}
-                    <button
-                      onClick={() => setServiciosOpen(true)}
-                      type="button"
-                      className="cursor-pointer px-6 py-3.5 bg-white hover:bg-[#FAF6EE] text-slate-800 text-[12px] font-extrabold uppercase tracking-wider rounded-full shadow-sm hover:shadow border-2 border-[#EAD293]/70 hover:border-[#EAD293] transition-all duration-300 flex items-center gap-2"
-                    >
-                      Descubre mis servicios
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-700" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. RIGHT SIDE: THE GORGEOUS, ALIVE MINILABMENTOR DASHBOARD WIDGET */}
-                <div className="lg:col-span-7">
-                  <div className="bg-gradient-to-br from-[#FDFBFD] via-[#FAF6F8] to-[#EEF5F8] rounded-[32px] border-3 border-[#EAD293]/65 shadow-2xl p-4 sm:p-5 relative overflow-hidden transition-all duration-500 hover:shadow-purple-50/50">
-                    
-                    {/* Inner Glass grid mirroring the reference image */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-white/75 backdrop-blur-md rounded-2xl border border-[#EAD293]/40 overflow-hidden min-h-[390px]">
-                      
-                      {/* INNER SIDEBAR PANEL */}
-                      <div className="md:col-span-3 bg-[#F0F4F8]/95 border-r border-slate-100 p-4 flex flex-col justify-between">
-                        <div className="space-y-5">
-                          <div className="flex items-center gap-1.5 px-1">
-                            <span className="font-serif font-black text-xs text-[#355C7D] tracking-tight">MiniLabMentor</span>
-                          </div>
-                          
-                          {/* Inside Menu List */}
-                          <div className="space-y-1">
-                            {[
-                              { 
-                                label: 'Resumen', 
-                                active: activeTab === "diagnostico" && activeSubTab === "resumen",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("resumen");
-                                }
-                              },
-                              { 
-                                label: 'Análisis', 
-                                active: activeTab === "diagnostico" && activeSubTab === "analisis",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("analisis");
-                                  setTimeout(() => {
-                                    const formEl = document.querySelector("#auth-diagnosis-form");
-                                    if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
-                                  }, 150);
-                                }
-                              },
-                              { 
-                                label: 'Estrategia', 
-                                active: activeTab === "diagnostico" && activeSubTab === "estrategia",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("estrategia");
-                                }
-                              },
-                              { 
-                                label: 'Sitio web', 
-                                active: activeTab === "diagnostico" && activeSubTab === "sitioweb",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("sitioweb");
-                                }
-                              },
-                              { 
-                                label: 'Marketing', 
-                                active: activeTab === "diagnostico" && activeSubTab === "marketing",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("marketing");
-                                }
-                              },
-                              { 
-                                label: 'Mentoría', 
-                                active: activeTab === "diagnostico" && activeSubTab === "mentoria",
-                                action: () => {
-                                  setActiveTab("diagnostico");
-                                  setActiveSubTab("mentoria");
-                                }
-                              },
-                              { 
-                                label: 'Recursos', 
-                                active: false,
-                                action: () => setRecursosOpen(true) 
-                              },
-                              { 
-                                label: 'Configuración', 
-                                active: false,
-                                action: () => setAreaPremiumOpen(true) 
-                              }
-                            ].map((item) => (
-                              <button
-                                key={item.label}
-                                type="button"
-                                onClick={item.action}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[10.5px] font-extrabold font-sans transition-all flex items-center justify-between ${
-                                  item.active 
-                                    ? 'bg-[#355C7D] text-white shadow-xs' 
-                                    : 'text-[#806B78] hover:text-[#355C7D] hover:bg-purple-50/40 cursor-pointer'
-                                }`}
-                              >
-                                <span>{item.label}</span>
-                                {item.label === 'Estrategia' && currentPlan && (
-                                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="pt-2 text-[8px] text-slate-400 font-mono tracking-wider text-center border-t border-slate-100/80">
-                          © PLATAFORMA ÉLITE
-                        </div>
-                      </div>
-
-                      {/* INNER WORKSPACE AREA */}
-                      <div className="md:col-span-9 p-4 flex flex-col justify-between space-y-4">
-                        
-                        {/* Title Bar & Profile Widget */}
-                        <div className="flex items-center justify-between border-b border-purple-50 pb-3">
-                          <div>
-                            <h4 className="text-[10px] text-amber-800 uppercase font-mono tracking-widest font-black leading-none">
-                              Resumen de tu negocio ✦
-                            </h4>
-                            <h3 className="text-[13px] font-bold text-[#3C1A2F] mt-1">
-                              Visión general de tu crecimiento ({businessName})
-                            </h3>
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5 bg-amber-50/60 border border-amber-200/50 px-2 py-0.5 rounded-full select-none cursor-pointer" onClick={() => setAreaPremiumOpen(true)}>
-                            <Crown className="w-2.5 h-2.5 text-amber-600 animate-pulse" />
-                            <span className="text-[8.5px] uppercase font-mono font-extrabold text-amber-700">Plan Premium</span>
-                            <div className="w-4 h-4 rounded-full bg-[#355C7D] text-white flex items-center justify-center text-[8px] font-black uppercase">
-                              U
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Sparkline Metric Cards Grid (4 mini cards mirroring the reference image) */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                          
-                          {/* Metric 1 */}
-                          <div className="bg-white p-2.5 rounded-xl border border-purple-50/80 shadow-2xs hover:shadow-xs transition-shadow">
-                            <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider font-mono">TRÁFICO ORGÁNICO</span>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-sm font-bold font-serif text-[#3C1A2F]">12.8K</span>
-                              <span className="text-[7.5px] text-emerald-600 font-bold">+28%</span>
-                            </div>
-                            <div className="mt-1 h-5 flex items-end">
-                              <svg viewBox="0 0 100 30" className="w-full h-full stroke-amber-500 stroke-2 fill-none overflow-visible">
-                                <path d="M0,25 Q15,10 30,22 T60,5 T90,12 T100,2" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] text-slate-400 font-medium leading-none block mt-0.5">vs. mes anterior</span>
-                          </div>
-
-                          {/* Metric 2 (Tasa de conversion - tied to state!) */}
-                          <div className="bg-white p-2.5 rounded-xl border border-purple-50/80 shadow-2xs hover:shadow-xs transition-shadow">
-                            <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider font-mono">TASA CONVERSIÓN</span>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-sm font-bold font-serif text-[#3C1A2F]">
-                                {calcConversion > 0 ? `${calcConversion}%` : "3.6%"}
-                              </span>
-                              <span className="text-[7.5px] text-emerald-600 font-bold">+42%</span>
-                            </div>
-                            <div className="mt-1 h-5 flex items-end">
-                              <svg viewBox="0 0 100 30" className="w-full h-full stroke-emerald-500 stroke-2 fill-none overflow-visible">
-                                <path d="M0,28 L20,20 L40,24 L60,10 L80,14 L100,3" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] text-slate-400 font-medium leading-none block mt-0.5">vs. mes anterior</span>
-                          </div>
-
-                          {/* Metric 3 (Ingresos - tied to state!) */}
-                          <div className="bg-white p-2.5 rounded-xl border border-purple-50/80 shadow-2xs hover:shadow-xs transition-shadow">
-                            <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider font-mono">INGRESOS NETOS</span>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-sm font-bold font-serif text-[#3C1A2F]">
-                                {calcPrice * calcLeads * (calcConversion/100) > 0 
-                                  ? `€${((calcPrice * calcLeads * (calcConversion/100)) / 1000).toFixed(1)}K`
-                                  : "€24.6K"
-                                }
-                              </span>
-                              <span className="text-[7.5px] text-[#A06283] font-bold">+35%</span>
-                            </div>
-                            <div className="mt-1 h-5 flex items-end">
-                              <svg viewBox="0 0 100 30" className="w-full h-full stroke-[#A06283] stroke-2 fill-none overflow-visible">
-                                <path d="M0,25 Q20,5 40,20 T80,10 T100,2" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] text-slate-400 font-medium leading-none block mt-0.5">vs. mes anterior</span>
-                          </div>
-
-                          {/* Metric 4 (Clientes nuevos - tied to state!) */}
-                          <div className="bg-white p-2.5 rounded-xl border border-purple-50/80 shadow-2xs hover:shadow-xs transition-shadow">
-                            <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider font-mono">CLIENTES NUEVOS</span>
-                            <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-sm font-bold font-serif text-[#3C1A2F]">
-                                {calcLeads > 0 ? calcLeads : "156"}
-                              </span>
-                              <span className="text-[7.5px] text-emerald-600 font-bold">+31%</span>
-                            </div>
-                            <div className="mt-1 h-5 flex items-end">
-                              <svg viewBox="0 0 100 30" className="w-full h-full stroke-blue-500 stroke-2 fill-none overflow-visible">
-                                <path d="M0,20 L25,12 L50,18 L75,5 L100,8" />
-                              </svg>
-                            </div>
-                            <span className="text-[7px] text-slate-400 font-medium leading-none block mt-0.5">vs. mes anterior</span>
-                          </div>
-
-                        </div>
-
-                        {/* Bottom columns: Circular Health progress gauge & Custom strategy card */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
-                          
-                          {/* Left Dial Column */}
-                          <div className="bg-white p-3.5 rounded-2xl border border-purple-50/80 shadow-2xs flex flex-col justify-between items-center text-center">
-                            <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide self-start">ANÁLISIS PERSONALIZADO</h5>
-                            
-                            <div className="my-2.5 relative flex items-center justify-center">
-                              {/* Radial progress ring */}
-                              <svg className="w-20 h-20 transform -rotate-90">
-                                <circle cx="40" cy="40" r="32" stroke="#FAF2F5" strokeWidth="6" fill="transparent" />
-                                <circle 
-                                  cx="40" 
-                                  cy="40" 
-                                  r="32" 
-                                  stroke="url(#gradientMalva)" 
-                                  strokeWidth="6" 
-                                  fill="transparent" 
-                                  strokeDasharray="201" 
-                                  strokeDashoffset="26" // represents ~87%
-                                />
-                                <defs>
-                                  <linearGradient id="gradientMalva" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#355C7D" />
-                                    <stop offset="100%" stopColor="#EE6596" />
-                                  </linearGradient>
-                                </defs>
-                              </svg>
-                              <div className="absolute flex flex-col items-center">
-                                <span className="text-lg font-serif font-black text-[#355C7D]">87</span>
-                                <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider -mt-1">/ 100</span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 justify-center leading-none">
-                                <span>Salud de tu negocio: Excelente ✧</span>
-                              </div>
-                              <p className="text-[8.5px] text-slate-500 leading-snug px-2">
-                                Vas por el camino correcto. Con algunos ajustes, puedes escalar aún más.
-                              </p>
-                            </div>
-
-                            <button
-                              onClick={() => setActiveTab("resultado")}
-                              type="button"
-                              className="mt-3 w-full py-1.5 bg-[#355C7D] hover:bg-[#6D3254] text-white text-[8.5px] font-black uppercase tracking-widest rounded-lg transition-all"
-                            >
-                              Ver análisis completo
-                            </button>
-                          </div>
-
-                          {/* Right Recommendations Column */}
-                          <div className="bg-white p-3.5 rounded-2xl border border-purple-50/80 shadow-2xs flex flex-col justify-between">
-                            <div>
-                              <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide mb-2.5">ESTRATEGIA RECOMENDADA</h5>
-                              
-                              <div className="space-y-2 text-left">
-                                {[
-                                  'Optimizar embudo de conversión',
-                                  'Mejorar SEO & visibilidad orgánica',
-                                  'Campañas estratégicas de valor',
-                                  'Sistema de automatización'
-                                ].map((item, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 text-[9px] text-[#3C1A2F] font-bold">
-                                    <span className="w-3.5 h-3.5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-[7px] font-black">✓</span>
-                                    <span>{item}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => setActiveTab("resultado")}
-                              type="button"
-                              className="mt-4 text-left text-[9px] text-[#355C7D] hover:text-[#DFC07F] transition-colors font-extrabold flex items-center gap-1"
-                            >
-                              Ver plan detallado <ChevronRight className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                        </div>
-
-                      </div>
-
+                    <div className="p-4 rounded-2xl border border-amber-500/25 bg-amber-500/5">
+                      <label className="block text-sm font-black text-slate-200 mb-2 font-sans">
+                        Correo electrónico <span className="text-amber-400">*</span>
+                        <span className="block text-[10px] text-slate-400 font-normal mt-0.5">Para recibir tu auditoría en PDF</span>
+                      </label>
+                      <input
+                        required
+                        type="email"
+                        className="w-full app-dark-input rounded-xl px-4 py-3 text-sm font-semibold transition-all placeholder-slate-500"
+                        placeholder="tu-correo@ejemplo.com"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                      />
                     </div>
 
-                  </div>
-                </div>
-
-              </div>
-
-              {/* THREE PROMO CARDS ROW WITH THE CRÉDITOS DISPONIBLES CARD AT THE RIGHT */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-                
-                {/* PROMO CARD 1 */}
-                <div className="bg-white p-5 rounded-2xl border border-purple-50 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center text-center space-y-3 group hover:-translate-y-0.5">
-                  <div className="w-12 h-12 rounded-full bg-[#FAF6F0] text-[#355C7D] flex items-center justify-center border border-purple-100/50 group-hover:scale-105 transition-transform shadow-xs">
-                    <Target className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-serif font-black text-[#3C1A2F]">Diagnóstico estratégico</h4>
-                    <p className="text-[10.5px] text-slate-500 leading-relaxed mt-1.5">
-                      Analizo tu negocio a profundidad para detectar oportunidades reales y priorizar lo que genera impacto.
-                    </p>
-                  </div>
-                </div>
-
-                {/* PROMO CARD 2 */}
-                <div className="bg-white p-5 rounded-2xl border border-purple-50 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center text-center space-y-3 group hover:-translate-y-0.5">
-                  <div className="w-12 h-12 rounded-full bg-[#FAF6F0] text-[#355C7D] flex items-center justify-center border border-purple-100/50 group-hover:scale-105 transition-transform shadow-xs">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-serif font-black text-[#3C1A2F]">Webs con conversión</h4>
-                    <p className="text-[10.5px] text-slate-500 leading-relaxed mt-1.5">
-                      Diseño sitios web estratégicos, elegantes y optimizados para atraer, convertir y vender con claridad.
-                    </p>
-                  </div>
-                </div>
-
-                {/* PROMO CARD 3 */}
-                <div className="bg-white p-5 rounded-2xl border border-purple-50 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center text-center space-y-3 group hover:-translate-y-0.5">
-                  <div className="w-12 h-12 rounded-full bg-[#FAF6F0] text-[#355C7D] flex items-center justify-center border border-purple-100/50 group-hover:scale-105 transition-transform shadow-xs">
-                    <Award className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-serif font-black text-[#3C1A2F]">Mentoría premium</h4>
-                    <p className="text-[10.5px] text-slate-500 leading-relaxed mt-1.5">
-                      Acompañamiento 1:1 para tomar decisiones inteligentes, escalar con estrategia y máxima claridad.
-                    </p>
-                  </div>
-                </div>
-
-                {/* FLOATING CRÉDITOS DISPONIBLES CARD */}
-                <div className="bg-gradient-to-br from-[#355C7D] to-[#5A7E9D] text-amber-100 p-5 rounded-2xl border-2 border-[#EAD293] shadow-md relative overflow-hidden flex flex-col justify-between group hover:-translate-y-0.5 transition-all">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-amber-200/10 rounded-full blur-xl -mr-6 -mt-6" />
-                  
-                  <div>
-                    <span className="text-[8px] tracking-widest uppercase font-mono font-black text-[#EAD293] block">CRÉDITOS DISPONIBLES</span>
-                    <div className="flex items-baseline gap-1.5 mt-1 border-b border-white/10 pb-2">
-                      <span className="text-3xl font-serif font-black text-white">{credits}</span>
-                      <span className="text-[10px] text-slate-300 font-bold">de 3 libres para sesiones 1:1</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 mt-3">
-                    <button
-                      onClick={() => setAgendarSesionOpen(true)}
-                      type="button"
-                      className="w-full py-1.5 bg-white hover:bg-[#FAF6EE] text-[#355C7D] text-[10px] uppercase font-black tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-97"
-                    >
-                      <Calendar className="w-3.5 h-3.5 text-[#355C7D]" />
-                      Agendar sesión
-                    </button>
-                    
-                    <button
-                      onClick={resetAllCredits}
-                      type="button"
-                      className="w-full py-1 bg-[#421E33] hover:bg-[#52253F] text-amber-200 text-[8.5px] uppercase font-bold tracking-widest rounded-lg transition-colors flex items-center justify-center gap-1"
-                    >
-                      <RefreshCw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: '6s' }} />
-                      Recargar créditos
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* TRANSITIONAL SECTION HEADER TO INPUT FORM */}
-              <div id="auth-diagnosis-form" className="relative pt-6 max-w-4xl mx-auto text-center space-y-3">
-                <div className="w-12 h-[2px] bg-gradient-to-r from-transparent via-[#EAD293] to-transparent mx-auto" />
-                <h3 className="text-lg font-serif font-bold text-[#3C1A2F]">
-                  Fórmula de Autodiagnóstico Estructurado
-                </h3>
-                <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                  Completa el test rápido para activar la inteligencia artificial. Nuestra tecnología reordenará tus finanzas virtuales, optimizará tus conversiones y generará tu estrategia exclusiva al instante.
-                </p>
-              </div>
-
-              {/* GORGEOUS PREMIUM FORM CONTAINER */}
-              <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-[#EAD293]/65 shadow-lg p-6 sm:p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-44 h-44 bg-purple-50/10 rounded-full blur-3xl pointer-events-none" />
-                
-                <form onSubmit={(e) => handleCreatePlan(e, false)} className="space-y-6">
-                  
-                  {/* Status header with clear button */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-slate-150">
-                    <span className="text-[11px] font-bold text-slate-500 font-sans">
-                      Formulario de Auditoría Activo: <strong className="text-[#355C7D]">{businessName.trim() ? businessName : "Nueva Marca en Blanco"}</strong>
-                    </span>
-                    {(businessName.trim() || niche.trim() || problema.trim()) && (
-                      <button
-                        type="button"
-                        onClick={handleNewAnalysis}
-                        className="cursor-pointer text-[10.5px] bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-lg border border-rose-200 transition-colors font-black flex items-center gap-1"
+                    <div>
+                      <label className="block text-sm font-black text-slate-200 mb-2">
+                        Modelo de negocio
+                      </label>
+                      <select
+                        className="w-full app-dark-input rounded-xl px-4 py-3 text-sm transition-all cursor-pointer font-sans"
+                        value={businessModel}
+                        onChange={(e) => setBusinessModel(e.target.value)}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Limpiar Datos (Empezar en Blanco)
-                      </button>
-                    )}
-                  </div>
+                        {BUSINESS_MODELS.map((m) => (
+                          <option key={m} value={m} className="bg-[#0a1018] text-slate-200">
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* BUSINESS NAME FIELD */}
+                    <div className="rounded-2xl p-5 border border-white/10 bg-white/[0.02] space-y-4">
+                      <span className="text-sm font-black text-amber-300 font-mono flex items-center gap-1.5 pb-2.5 border-b border-white/10">
+                        <Award className="w-4 h-4" />
+                        Preguntas de autodiagnóstico
+                      </span>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {DIAG_QUESTIONS.map((q) => (
+                          <div key={q.id} className="space-y-1.5 text-left">
+                            <label className="block text-xs font-bold text-slate-300 font-sans leading-tight">
+                              {q.question}
+                            </label>
+                            <select
+                              className="w-full app-dark-input rounded-lg px-2.5 py-2.5 text-xs font-sans"
+                              value={(diagnosticAnswers as any)[q.id] || ""}
+                              onChange={(e) => setDiagnosticAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                            >
+                              {q.options.map((opt) => (
+                                <option key={opt.value} value={opt.value} className="bg-[#0a1018] text-slate-200">
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex items-center gap-1.5 font-sans">
-                        🏪 Nombre de tu Negocio Local <span className="text-amber-600 font-bold">*</span>
+                      <label className="block text-sm font-black text-slate-200 mb-2 font-sans">
+                        Tu bloqueo o problema actual <span className="text-amber-400">*</span>
                       </label>
-                      <input
+                      <textarea
                         required
-                        type="text"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400"
-                        placeholder="Ej: Cafetería Aromas, Autolavado Central"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
+                        rows={4}
+                        className="w-full app-dark-input rounded-xl px-4 py-3 text-sm transition-all placeholder-slate-500 leading-relaxed font-sans"
+                        placeholder="¿Qué te frena hoy en tu negocio?"
+                        value={problema}
+                        onChange={(e) => setProblema(e.target.value)}
                       />
                     </div>
 
-                    {/* NICHE FIELD */}
-                    <div>
-                      <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex items-center gap-1.5">
-                        1. ¿Cuál es tu Nicho de Mercado o Sector? <span className="text-amber-600 font-bold">*</span>
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 font-sans"
-                        placeholder="Ej: Odontología Estética, Pastelería Artesanal"
-                        value={niche}
-                        onChange={(e) => setNiche(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* EMAIL ADDRESS FIELD - CAPTURING AUDIT LEADS */}
-                  <div className="bg-amber-50/50 p-4 rounded-2xl border-2 border-amber-200/60">
-                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 flex flex-col sm:flex-row sm:items-center gap-1.5 font-sans">
-                      <span>📧 Tu Correo Electrónico <span className="text-amber-600 font-bold">*</span></span>
-                      <span className="text-[10px] sm:text-xs text-[#355C7D] font-mono font-bold uppercase bg-white px-2.5 py-0.5 rounded-md border border-amber-200">Para recibir tu Auditoría Completa en PDF</span>
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-450"
-                      placeholder="Ej: tu-correo@ejemplo.com"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                    />
-                  </div>
-
-                  {/* BUSINESS MODEL SELECT */}
-                  <div>
-                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2">
-                      2. Modelo de Negocio Base
-                    </label>
-                    <select
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all cursor-pointer font-sans"
-                      value={businessModel}
-                      onChange={(e) => setBusinessModel(e.target.value)}
-                    >
-                      {BUSINESS_MODELS.map((m) => (
-                        <option key={m} value={m} className="bg-white text-slate-850 font-sans text-sm sm:text-base">
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* STAGED MULTIPLES QUESTIONS */}
-                  <div className="bg-[#FAF7F9] rounded-2xl p-5 border border-purple-100 space-y-4 shadow-2xs">
-                    <span className="text-sm font-black text-[#355C7D] font-mono flex items-center gap-1.5 pb-2.5 border-b border-slate-200/50">
-                      <Award className="w-4 h-4 text-[#355C7D] animate-pulse" />
-                      Preguntas de Autodiagnóstico Integrado
-                    </span>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {DIAG_QUESTIONS.map((q) => (
-                        <div key={q.id} className="space-y-1.5 text-left">
-                          <label className="block text-xs sm:text-[13px] font-bold text-slate-700 font-sans leading-tight">
-                            {q.question}
-                          </label>
-                          <select
-                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-2.5 text-xs sm:text-[13px] text-slate-800 focus:outline-none focus:border-purple-600 font-sans"
-                            value={(diagnosticAnswers as any)[q.id] || ""}
-                            onChange={(e) => setDiagnosticAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                          >
-                            {q.options.map((opt) => (
-                              <option key={opt.value} value={opt.value} className="bg-white text-slate-800">
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CORE OBSTACLE OR BLOCK MESSAGE AREA */}
-                  <div>
-                    <label className="block text-sm sm:text-[15px] font-black text-slate-800 mb-2 font-sans">
-                      3. Describe tu problema o bloqueo actual <span className="text-amber-600 font-bold">*</span>
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:border-[#355C7D] transition-all placeholder-slate-400 leading-relaxed font-sans"
-                      placeholder="Cuéntanos con confianza o haz clic en un ejemplo rápido. Qué te frena o preocupa hoy de tu negocio..."
-                      value={problema}
-                      onChange={(e) => setProblema(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  {/* FORM ACTION SUBMIT PILLS - ONLY ONE STRONG BUTTON */}
-                  <div className="pt-2">
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full cursor-pointer relative overflow-hidden bg-[#355C7D] hover:bg-[#2C4E6D] text-white font-black py-4 px-6 rounded-xl text-sm sm:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 duration-300 uppercase tracking-wider font-mono active:scale-98 disabled:opacity-75"
+                      className="w-full cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0a0f18] font-black py-4 px-6 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider font-mono active:scale-[0.98] disabled:opacity-75"
                     >
                       {isLoading ? (
                         <>
-                          <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                          <RefreshCw className="w-5 h-5 animate-spin" />
                           <span className="animate-pulse text-xs sm:text-sm">ANALIZANDO SI TIENES UN HOBBY O UNA MAQUINA DE RIQUEZA</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-5 h-5 text-[#EAD293] animate-pulse" />
-                          <span className="text-sm sm:text-base">Generar Mi Auditoría Gratis</span>
+                          <Sparkles className="w-5 h-5" />
+                          <span>Generar mi auditoría gratis</span>
                         </>
                       )}
                     </button>
-                  </div>
 
-                </form>
+                  </form>
+                </div>
               </div>
 
             </div>
@@ -2354,7 +2026,7 @@ export default function App() {
                   currentPlan={currentPlan}
                   loadingStep={loadingStep}
                   loadingMessages={loadingMessages}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={handleTabNavigation}
                   feedTrackingPanel={feedTrackingPanel}
                   handleCopyToClipboard={handleCopyToClipboard}
                   currentStatusInfo={currentStatusInfo}
@@ -2371,29 +2043,29 @@ export default function App() {
                   onAgendarSesion={() => setAgendarSesionOpen(true)}
                 />
               ) : (
-                <div className="bg-white rounded-3xl p-8 border border-purple-100 shadow-xl max-w-2xl mx-auto text-center space-y-6">
-                  <div className="w-16 h-16 rounded-full bg-[#FAF6F0] text-[#355C7D] flex items-center justify-center mx-auto border border-purple-100/50">
-                    <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" />
+                <div className="app-dark-card-accent rounded-3xl p-8 sm:p-10 max-w-2xl mx-auto text-center space-y-6">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto">
+                    <Sparkles className="w-8 h-8 text-amber-400 animate-pulse" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-xl font-serif font-black text-[#3C1A2F]">Estrategia de Élite no activa</h3>
-                    <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    <h3 className="text-xl font-serif font-black text-white">Estrategia de Élite no activa</h3>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                       Para ver tu hoja de ruta estratégica automatizada, tus finanzas optimizadas y tus 7 metas VIP, primero debes realizar el autodiagnóstico con Inteligencia Artificial.
                     </p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-3 pt-2">
                     <button
                       onClick={() => setActiveSubTab("analisis")}
-                      className="px-6 py-3 bg-gradient-to-r from-[#355C7D] to-[#5A7E9D] text-white text-xs font-black uppercase tracking-wider rounded-xl hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a0f18] text-xs font-black uppercase tracking-wider rounded-xl hover:shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      <Sparkles className="w-4 h-4 text-[#EAD293]" />
+                      <Sparkles className="w-4 h-4" />
                       Empezar Análisis Gratis
                     </button>
                     <button
                       onClick={(e) => handleCreatePlan(e, true)}
-                      className="px-6 py-3 bg-white hover:bg-amber-50/20 border border-[#EAD293] text-[#7E3B60] text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      <Play className="w-3.5 h-3.5 text-amber-600" />
+                      <Play className="w-3.5 h-3.5" />
                       Cargar Demo de IA
                     </button>
                   </div>
@@ -2402,130 +2074,131 @@ export default function App() {
             </div>
           )}
 
-          {/* SUB-TAB: SITIO WEB (DISEÑO WEB RECOMENDADO) */}
+          {/* SUB-TAB: SITIO WEB */}
           {activeTab === "diagnostico" && activeSubTab === "sitioweb" && (
-            <div className="space-y-8 max-w-4xl mx-auto">
-              <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-1.5 bg-[#FAF6F0] border border-[#EAD293]/40 px-3 py-1 rounded-full text-[10px] text-[#355C7D] uppercase font-mono font-bold">
-                  <span>Plano de Conversión</span>
-                </div>
-                <h3 className="text-2xl font-serif font-black text-[#3C1A2F]">Estructura de Sitio Web Recomendada</h3>
-                <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                  Basado en tu modelo de negocio de servicios, hemos diseñado el embudo óptimo de conversión de 5 bloques para maximizar tus llamadas estratégicas.
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div className="app-dark-card rounded-2xl p-5 sm:p-6 text-center space-y-2">
+                <p className="text-[10px] text-amber-400 uppercase font-mono font-black tracking-widest">Plano de conversión</p>
+                <h3 className="text-xl font-serif font-black text-white">Estructura web recomendada</h3>
+                <p className="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+                  Embudo de 4 bloques orientado a agendar llamadas de alto valor.
                 </p>
               </div>
 
-              {/* Interactive Blueprint Canvas */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Visual Wireframe Column */}
                 <div className="md:col-span-2 space-y-4">
-                  
-                  {/* HERO WIREFRAME */}
-                  <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-4 relative overflow-hidden group hover:border-[#355C7D]/40 transition-colors">
-                    <span className="absolute top-3 right-3 text-[9px] uppercase font-mono bg-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600">Bloque 1</span>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Monitor className="w-4 h-4 text-slate-500" />
-                        <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Sección de Impacto (Hero Section)</span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-1.5 shadow-2xs">
-                        <div className="h-4 bg-slate-100 rounded-sm w-3/4 font-extrabold text-[9px] text-slate-600 px-1 flex items-center">
-                          PROMETE EL RESULTADO DESEADO EN 1 FRASE CLARA
-                        </div>
-                        <div className="h-2.5 bg-slate-50 rounded-sm w-1/2" />
-                        <div className="h-6 bg-[#355C7D] rounded-md w-36 text-white text-[8px] font-black uppercase flex items-center justify-center shadow-xs">
-                          Agenda tu Jugada Maestra
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PAIN / PROBLEM WIREFRAME */}
-                  <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-4 relative overflow-hidden group hover:border-[#355C7D]/40 transition-colors">
-                    <span className="absolute top-3 right-3 text-[9px] uppercase font-mono bg-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600">Bloque 2</span>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <AlertTriangle className="w-4 h-4 text-amber-600" />
-                        <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Diagnóstico del Dolor del Cliente</span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-1.5 shadow-2xs">
-                        <div className="text-[9px] text-[#355C7D] font-extrabold uppercase">"¿Te sientes frustrado por no saber de dónde vendrá tu próximo cliente estratégico?"</div>
-                        <p className="text-[8.5px] text-slate-500 leading-relaxed">Conectamos emocionalmente mostrando que entendemos el síntoma exacto del problema de tu cliente antes de presentar tu solución.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* METODOLOGIA / VALUE WIREFRAME */}
-                  <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-4 relative overflow-hidden group hover:border-[#355C7D]/40 transition-colors">
-                    <span className="absolute top-3 right-3 text-[9px] uppercase font-mono bg-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600">Bloque 3</span>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Compass className="w-4 h-4 text-blue-500" />
-                        <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Los 3 Pilares del Éxito</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border border-slate-100 shadow-2xs">
-                        {[
-                          { title: "Foco", desc: "Priorizamos lo que rinde." },
-                          { title: "Estructura", desc: "Soporte de conversión." },
-                          { title: "Mentoría", desc: "Decisiones con claridad." }
-                        ].map((pilar, idx) => (
-                          <div key={idx} className="bg-slate-50/60 p-2 rounded-md border border-slate-100 text-center space-y-1">
-                            <span className="text-[9px] font-bold text-slate-800 block">{pilar.title}</span>
-                            <span className="text-[7.5px] text-slate-500 block leading-tight">{pilar.desc}</span>
+                  {[
+                    {
+                      block: "Bloque 1",
+                      icon: Monitor,
+                      iconClass: "text-slate-400",
+                      title: "Hero de impacto",
+                      preview: (
+                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 space-y-1.5">
+                          <div className="h-4 bg-white/10 rounded-sm w-3/4 text-[9px] text-slate-300 px-1 flex items-center font-bold">
+                            Promesa clara en 1 frase
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* LA OFERTA VIP WIREFRAME */}
-                  <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-4 relative overflow-hidden group hover:border-[#355C7D]/40 transition-colors">
-                    <span className="absolute top-3 right-3 text-[9px] uppercase font-mono bg-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600">Bloque 4</span>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Gift className="w-4 h-4 text-emerald-500" />
-                        <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Tu Oferta Irresistible Empaquetada</span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-2 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-extrabold text-slate-800">Programa Completo de Acompañamiento VIP</span>
-                          <span className="text-[10px] font-black text-emerald-600">Valor Exclusivo</span>
+                          <div className="h-2.5 bg-white/5 rounded-sm w-1/2" />
+                          <div className="h-6 bg-[#355C7D] rounded-md w-36 text-white text-[8px] font-black uppercase flex items-center justify-center">
+                            Agendar sesión
+                          </div>
                         </div>
-                        <ul className="text-[8.5px] text-slate-500 space-y-1 pl-3 list-disc">
-                          <li>Auditoría profunda inicial de 360 grados</li>
-                          <li>Sitio web autogestionable optimizado para agendar llamadas</li>
-                          <li>4 Sesiones de mentoría individual con hoja de ruta</li>
-                        </ul>
+                      ),
+                    },
+                    {
+                      block: "Bloque 2",
+                      icon: AlertTriangle,
+                      iconClass: "text-amber-400",
+                      title: "Dolor del cliente",
+                      preview: (
+                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 space-y-1.5">
+                          <div className="text-[9px] text-amber-200 font-bold">¿Frustrado por no saber de dónde vendrá tu próximo cliente?</div>
+                          <p className="text-[8.5px] text-slate-400 leading-relaxed">Conecta con el problema antes de presentar tu solución.</p>
+                        </div>
+                      ),
+                    },
+                    {
+                      block: "Bloque 3",
+                      icon: Compass,
+                      iconClass: "text-blue-400",
+                      title: "3 pilares del éxito",
+                      preview: (
+                        <div className="grid grid-cols-3 gap-2 bg-white/5 p-2.5 rounded-lg border border-white/10">
+                          {[
+                            { title: "Foco", desc: "Prioriza lo que rinde." },
+                            { title: "Estructura", desc: "Soporte de conversión." },
+                            { title: "Mentoría", desc: "Decisiones claras." },
+                          ].map((pilar) => (
+                            <div key={pilar.title} className="bg-white/[0.03] p-2 rounded-md border border-white/10 text-center space-y-1">
+                              <span className="text-[9px] font-bold text-slate-200 block">{pilar.title}</span>
+                              <span className="text-[7.5px] text-slate-500 block leading-tight">{pilar.desc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ),
+                    },
+                    {
+                      block: "Bloque 4",
+                      icon: Gift,
+                      iconClass: "text-emerald-400",
+                      title: "Oferta empaquetada",
+                      preview: (
+                        <div className="bg-white/5 p-3 rounded-lg border border-white/10 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-slate-200">Programa VIP de acompañamiento</span>
+                            <span className="text-[10px] font-black text-emerald-400">Exclusivo</span>
+                          </div>
+                          <ul className="text-[8.5px] text-slate-400 space-y-1 pl-3 list-disc">
+                            <li>Auditoría inicial 360°</li>
+                            <li>Web optimizada para agendar llamadas</li>
+                            <li>4 sesiones de mentoría con hoja de ruta</li>
+                          </ul>
+                        </div>
+                      ),
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.block}
+                        className="app-dark-card rounded-2xl border border-dashed border-white/15 p-4 relative overflow-hidden hover:border-amber-500/30 transition-colors"
+                      >
+                        <span className="absolute top-3 right-3 text-[9px] uppercase font-mono bg-white/10 px-2 py-0.5 rounded-md font-bold text-slate-400">
+                          {item.block}
+                        </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <Icon className={`w-4 h-4 ${item.iconClass}`} />
+                            <span className="text-[11px] font-extrabold text-slate-200 uppercase tracking-wider">{item.title}</span>
+                          </div>
+                          {item.preview}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
+                    );
+                  })}
                 </div>
 
-                {/* FAQ Accordion Side Column */}
                 <div className="space-y-4">
-                  <div className="bg-gradient-to-b from-[#FAF6F8] to-[#EEF5F8] rounded-2xl p-4 border border-[#EAD293]/40 space-y-4">
-                    <h4 className="text-xs font-serif font-black text-[#3C1A2F] uppercase tracking-wider">Preguntas Frecuentes de Estructura</h4>
-                    
+                  <div className="app-dark-card rounded-2xl p-4 space-y-4">
+                    <h4 className="text-xs font-serif font-black text-amber-300 uppercase tracking-wider">Preguntas frecuentes</h4>
                     <div className="space-y-2">
                       {[
-                        { q: "¿Por qué no una web corporativa tradicional?", a: "Las webs corporativas tradicionales dispersan la atención con muchos enlaces. Esta estructura tiene UN SOLO objetivo: agendar llamadas de clientes de alto valor." },
-                        { q: "¿Cómo se adapta a mi marca personal?", a: "Reemplazamos los textos (copywriting) y las imágenes por las tuyas, alineando tu tono de voz estratégico." },
-                        { q: "¿Necesito conocimientos de programación?", a: "No. El sistema se diseña en plataformas visuales intuitivas para que seas 100% independiente." }
+                        { q: "¿Por qué no una web corporativa tradicional?", a: "Esta estructura tiene un solo objetivo: agendar llamadas de clientes de alto valor." },
+                        { q: "¿Cómo se adapta a mi marca?", a: "Reemplazamos textos e imágenes por los tuyos, alineando tu tono de voz." },
+                        { q: "¿Necesito programar?", a: "No. Se diseña en plataformas visuales para que seas independiente." },
                       ].map((item, idx) => {
                         const isOpen = openFaqIndex === idx;
                         return (
-                          <div key={idx} className="bg-white rounded-xl border border-purple-50 overflow-hidden shadow-2xs">
+                          <div key={idx} className="rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]">
                             <button
                               onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                              className="w-full px-3.5 py-2.5 text-left text-[10px] font-bold text-slate-700 hover:text-[#355C7D] transition-colors flex items-center justify-between"
+                              className="w-full px-3.5 py-2.5 text-left text-[10px] font-bold text-slate-300 hover:text-amber-300 transition-colors flex items-center justify-between"
                             >
                               <span>{item.q}</span>
-                              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
                             </button>
                             {isOpen && (
-                              <div className="px-3.5 pb-3 pt-1 text-[9px] text-slate-500 leading-relaxed border-t border-slate-50 bg-[#FAFBFD]">
+                              <div className="px-3.5 pb-3 pt-1 text-[9px] text-slate-400 leading-relaxed border-t border-white/10">
                                 {item.a}
                               </div>
                             )}
@@ -2535,88 +2208,73 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-[#355C7D] to-[#5A7E9D] text-amber-100 p-4 rounded-2xl border border-[#EAD293] text-center space-y-3">
-                    <h5 className="text-[10px] uppercase font-mono font-black tracking-widest text-[#EAD293]">¿Quieres este plano para ti?</h5>
-                    <p className="text-[9px] text-slate-200 leading-relaxed">
-                      Si buscas que Adriana implemente esta estructura premium por ti de manera personalizada, agenda tu sesión hoy mismo.
+                  <div className="bg-gradient-to-br from-[#1C2C54] to-[#101C3D] text-amber-100 p-4 rounded-2xl border border-[#EAD293]/40 text-center space-y-3">
+                    <h5 className="text-[10px] uppercase font-mono font-black tracking-widest text-[#EAD293]">¿Quieres implementarlo?</h5>
+                    <p className="text-[9px] text-slate-300 leading-relaxed">
+                      Agenda una sesión para que Adriana lo implemente por ti.
                     </p>
                     <button
-                      onClick={() => {
-                        setActiveSubTab("mentoria");
-                      }}
-                      className="w-full py-2 bg-white hover:bg-[#FAF6EE] text-[#355C7D] text-[9.5px] uppercase font-black tracking-wider rounded-lg transition-all"
+                      onClick={() => setActiveSubTab("mentoria")}
+                      className="w-full py-2 bg-[#EAD293] hover:bg-amber-200 text-[#101C3D] text-[9.5px] uppercase font-black tracking-wider rounded-lg transition-all"
                     >
-                      Reservar mi Sesión 1:1
+                      Reservar sesión 1:1
                     </button>
                   </div>
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* SUB-TAB: MARKETING (COPYWRITING ANGLES) */}
+          {/* SUB-TAB: MARKETING */}
           {activeTab === "diagnostico" && activeSubTab === "marketing" && (
             <div className="space-y-6 max-w-4xl mx-auto">
-              <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-1.5 bg-[#FAF6F0] border border-[#EAD293]/40 px-3 py-1 rounded-full text-[10px] text-[#355C7D] uppercase font-mono font-bold">
-                  <span>Copywriting de Impacto</span>
-                </div>
-                <h3 className="text-2xl font-serif font-black text-[#3C1A2F]">Ganchos de Marketing para Redes</h3>
-                <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                  Utiliza estas fórmulas diseñadas científicamente para capturar la atención de tu cliente ideal en Reels, TikTok o emails en menos de 3 segundos.
+              <div className="app-dark-card rounded-2xl p-5 sm:p-6 text-center space-y-2">
+                <p className="text-[10px] text-amber-400 uppercase font-mono font-black tracking-widest">Copywriting de impacto</p>
+                <h3 className="text-xl font-serif font-black text-white">Ganchos para redes</h3>
+                <p className="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+                  Fórmulas listas para Reels, TikTok o emails. Copia y adapta a tu nicho.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   {
-                    title: "Gancho 1: El Error Oculto",
-                    hook: `El error de €500 que casi todos los profesionales cometen al intentar vender sus servicios de alto valor por internet...`,
-                    desc: "Ideal para generar curiosidad extrema y posicionarte como la autoridad que tiene la solución perfecta.",
-                    badge: "Alto Engagement"
+                    title: "El error oculto",
+                    hook: "El error de €500 que casi todos los profesionales cometen al vender servicios de alto valor por internet...",
+                    badge: "Alto engagement",
                   },
                   {
-                    title: "Gancho 2: El Síntoma Doloroso",
-                    hook: `La razón por la cual tu página web actual está espantando a tus clientes ideales en lugar de agendarte llamadas...`,
-                    desc: "Perfecto para conectar de inmediato con personas que ya sienten la frustración de no ver resultados.",
-                    badge: "Alta Conversión"
+                    title: "El síntoma doloroso",
+                    hook: "La razón por la cual tu página web espanta a tus clientes ideales en lugar de agendarte llamadas...",
+                    badge: "Alta conversión",
                   },
                   {
-                    title: "Gancho 3: La Solución Invisible",
-                    hook: `3 cosas que tu negocio de consultoría necesita automatizar hoy mismo si quieres duplicar tu facturación con menos llamadas...`,
-                    desc: "Diseñado para captar la atención de perfiles más avanzados que buscan optimizar su tiempo.",
-                    badge: "Tráfico Calificado"
-                  }
+                    title: "La solución invisible",
+                    hook: "3 cosas que tu negocio necesita automatizar hoy si quieres duplicar facturación con menos llamadas...",
+                    badge: "Tráfico calificado",
+                  },
                 ].map((item, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl border border-purple-50 p-5 shadow-xs flex flex-col justify-between space-y-4 group hover:-translate-y-0.5 transition-all duration-300">
+                  <div key={idx} className="app-dark-card rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-amber-500/25 transition-colors">
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-amber-600 font-extrabold uppercase font-mono">{item.badge}</span>
-                        <Sparkles className="w-3.5 h-3.5 text-[#EAD293]" />
-                      </div>
-                      <h4 className="text-xs font-serif font-black text-[#3C1A2F]">{item.title}</h4>
-                      <p className="text-[11px] bg-slate-50 p-3 rounded-lg border border-slate-100 text-slate-600 italic leading-relaxed">
-                        "{item.hook}"
-                      </p>
-                      <p className="text-[9.5px] text-slate-400 leading-relaxed">
-                        {item.desc}
+                      <span className="text-[10px] text-amber-400 font-extrabold uppercase font-mono">{item.badge}</span>
+                      <h4 className="text-xs font-serif font-black text-white">{item.title}</h4>
+                      <p className="text-[11px] bg-white/5 p-3 rounded-lg border border-white/10 text-slate-300 italic leading-relaxed">
+                        &ldquo;{item.hook}&rdquo;
                       </p>
                     </div>
-
                     <button
                       onClick={() => handleCopyToClipboard(item.hook, idx.toString())}
-                      className="w-full py-2 bg-[#F0F4F8] hover:bg-[#355C7D] text-[#355C7D] hover:text-white border border-[#355C7D]/20 text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full py-2 bg-white/5 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1.5"
                     >
                       {copiedText === idx.toString() ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                          <span>¡Copiado con Éxito!</span>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copiado</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5" />
-                          <span>Copiar Gancho</span>
+                          <span>Copiar gancho</span>
                         </>
                       )}
                     </button>
@@ -2624,89 +2282,81 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="bg-gradient-to-r from-[#FAF6F8] to-[#EEF5F8] rounded-2xl p-6 border border-[#EAD293]/40 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-1 text-left">
-                  <h4 className="text-xs font-serif font-black text-[#3C1A2F]">¿Necesitas ángulos adaptados a tu micronicho?</h4>
-                  <p className="text-[10px] text-slate-500 max-w-xl">
-                    Al realizar el autodiagnóstico con nuestra Inteligencia Artificial, generaremos hasta 7 ángulos estratégicos ultra-segmentados para tus productos o servicios específicos de manera automatizada.
+              <div className="app-dark-card-accent rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-left space-y-1">
+                  <h4 className="text-xs font-serif font-black text-amber-300">¿Ganchos para tu micronicho?</h4>
+                  <p className="text-[10px] text-slate-400 max-w-md">
+                    El autodiagnóstico con IA genera hasta 7 ángulos personalizados para tu negocio.
                   </p>
                 </div>
                 <button
                   onClick={() => setActiveSubTab("analisis")}
-                  className="px-5 py-2.5 bg-[#355C7D] text-white text-[10px] uppercase font-black tracking-widest rounded-lg"
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a0f18] text-[10px] uppercase font-black tracking-wider rounded-lg shrink-0"
                 >
-                  Ir al Análisis IA
+                  Ir al análisis IA
                 </button>
               </div>
             </div>
           )}
 
-          {/* SUB-TAB: MENTORÍA (ADRIANA MENTORA & VIP RESERVATION) */}
+          {/* SUB-TAB: MENTORÍA */}
           {activeTab === "diagnostico" && activeSubTab === "mentoria" && (
-            <div className="space-y-8 max-w-4xl mx-auto">
-              <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-1.5 bg-[#FAF6F0] border border-[#EAD293]/40 px-3 py-1 rounded-full text-[10px] text-[#355C7D] uppercase font-mono font-bold">
-                  <span>Acompañamiento VIP</span>
-                </div>
-                <h3 className="text-2xl font-serif font-black text-[#3C1A2F]">Mentoría de Impacto con Adriana</h3>
-                <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                  Toma las decisiones estratégicas de tu negocio bajo el soporte directo de Adriana. Sesiones enfocadas 100% en claridad, foco y planes de acción ágiles.
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div className="app-dark-card rounded-2xl p-5 sm:p-6 text-center space-y-2">
+                <p className="text-[10px] text-amber-400 uppercase font-mono font-black tracking-widest">Acompañamiento VIP</p>
+                <h3 className="text-xl font-serif font-black text-white">Mentoría con Adriana</h3>
+                <p className="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+                  Sesiones 1:1 enfocadas en claridad estratégica y planes de acción concretos.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
-                
-                {/* Left Side: Adriana's profile */}
-                <div className="md:col-span-5 bg-white rounded-3xl p-6 border border-purple-100 flex flex-col justify-between space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+                <div className="md:col-span-5 app-dark-card rounded-3xl p-6 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[#FAF6F0] border border-[#EAD293] flex items-center justify-center font-serif text-lg font-black text-[#355C7D]">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center font-serif text-lg font-black text-amber-300">
                         A
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-[#3C1A2F]">Adriana</h4>
-                        <span className="text-[10px] text-slate-400 font-mono">Mentora Estratégica Premium</span>
+                        <h4 className="text-sm font-bold text-white">Adriana</h4>
+                        <span className="text-[10px] text-slate-400 font-mono">Mentora estratégica</span>
                       </div>
                     </div>
-
-                    <p className="text-[11.5px] text-slate-600 leading-relaxed">
-                      "Ayudo a consultores, coaches y prestadores de servicios a ordenar sus marcas, diseñar páginas web de alto impacto y estructurar embudos sencillos que agenden clientes estables sin perder su foco."
+                    <p className="text-[11.5px] text-slate-400 leading-relaxed italic">
+                      &ldquo;Ayudo a consultores y prestadores de servicios a ordenar su marca, diseñar webs de impacto y estructurar embudos que agenden clientes estables.&rdquo;
                     </p>
-
-                    <div className="space-y-2 pt-2">
+                    <ul className="space-y-2 pt-1">
                       {[
-                        "Claridad estratégica en una sola sesión",
+                        "Claridad estratégica en una sesión",
                         "Estructuras ágiles sin rodeos técnicos",
-                        "Enfoque en rentabilidad neta real"
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-[10.5px] text-slate-500 font-bold">
-                          <Check className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                        "Enfoque en rentabilidad real",
+                      ].map((item) => (
+                        <li key={item} className="flex items-center gap-2 text-[10.5px] text-slate-300 font-bold">
+                          <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <span>{item}</span>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
-
-                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-slate-400">
-                    <span className="text-[9px] uppercase font-mono">Próxima disponibilidad:</span>
-                    <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full animate-pulse">HOY ACTIVO</span>
+                  <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[9px] uppercase font-mono text-slate-500">Disponibilidad</span>
+                    <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full">Hoy activo</span>
                   </div>
                 </div>
 
-                {/* Right Side: Interactive Booking Calendar Component */}
                 <div className="md:col-span-7">
-                  <div className="bg-gradient-to-br from-[#1C2C54] to-[#101C3D] text-white rounded-3xl p-6 sm:p-8 border border-[#EAD293]/40 shadow-2xl space-y-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl" />
-                    
+                  <div className="bg-gradient-to-br from-[#1C2C54] to-[#101C3D] text-white rounded-3xl p-6 sm:p-8 border border-[#EAD293]/40 shadow-2xl space-y-5 relative overflow-hidden h-full">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
                     {bookingSuccess ? (
-                      <div className="text-center space-y-4 py-8 animate-fade-in">
+                      <div className="text-center space-y-4 py-8">
                         <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
                           <Check className="w-8 h-8" />
                         </div>
                         <div className="space-y-1">
-                          <h4 className="text-lg font-serif font-black text-amber-100">¡Reserva de Éxito!</h4>
+                          <h4 className="text-lg font-serif font-black text-amber-100">Reserva confirmada</h4>
                           <p className="text-[11px] text-slate-300 max-w-sm mx-auto">
-                            Tu reserva para el día <span className="font-bold text-white">{selectedBookingDay}</span> a las <span className="font-bold text-white">{selectedBookingSlot}</span> ha sido procesada con Adriana. Te contactaremos vía WhatsApp para confirmar.
+                            {selectedBookingDay} a las {selectedBookingSlot}. Te contactaremos por WhatsApp.
                           </p>
                         </div>
                         <button
@@ -2715,97 +2365,86 @@ export default function App() {
                             setBookingWhatsApp("");
                             setBookingName("");
                           }}
-                          className="px-6 py-2 bg-white hover:bg-slate-100 text-[#101C3D] text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors"
+                          className="px-6 py-2 bg-[#EAD293] hover:bg-amber-200 text-[#101C3D] text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors"
                         >
                           Agendar otra sesión
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-4 relative z-10">
                         <div className="flex items-center justify-between border-b border-white/10 pb-3">
                           <div>
-                            <span className="text-[8px] tracking-widest uppercase font-mono font-bold text-amber-400 block">JUGADA MAESTRA</span>
-                            <h4 className="text-sm font-bold text-white mt-0.5">Agendar Sesión de Mentoría Directa</h4>
+                            <span className="text-[8px] tracking-widest uppercase font-mono font-bold text-amber-400 block">Jugada maestra</span>
+                            <h4 className="text-sm font-bold text-white mt-0.5">Agendar sesión 1:1</h4>
                           </div>
                           <span className="text-[10px] font-mono text-slate-300 bg-white/10 px-2 py-0.5 rounded-full font-bold">
-                            Consume: 1 crédito
+                            1 crédito
                           </span>
                         </div>
 
-                        {/* Step 1: Day Matrix Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">1. Selecciona el Día de la Semana</label>
+                          <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">Día</label>
                           <div className="grid grid-cols-5 gap-1.5">
-                            {["Lunes", "Martes", "Miérc.", "Jueves", "Viern."].map((day) => {
-                              const isSelected = selectedBookingDay === day;
-                              return (
-                                <button
-                                  key={day}
-                                  type="button"
-                                  onClick={() => setSelectedBookingDay(day)}
-                                  className={`py-2 text-[9.5px] font-extrabold uppercase rounded-lg transition-all ${
-                                    isSelected 
-                                      ? "bg-[#355C7D] text-white border border-[#EAD293]" 
-                                      : "bg-white/5 text-slate-300 hover:bg-white/10"
-                                  }`}
-                                >
-                                  {day}
-                                </button>
-                              );
-                            })}
+                            {["Lunes", "Martes", "Miérc.", "Jueves", "Viern."].map((day) => (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => setSelectedBookingDay(day)}
+                                className={`py-2 text-[9.5px] font-extrabold uppercase rounded-lg transition-all ${
+                                  selectedBookingDay === day
+                                    ? "bg-[#355C7D] text-white border border-[#EAD293]"
+                                    : "bg-white/5 text-slate-300 hover:bg-white/10 border border-transparent"
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
                           </div>
                         </div>
 
-                        {/* Step 2: Time Slots Selector */}
                         <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">2. Selecciona la Hora</label>
+                          <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">Hora</label>
                           <div className="grid grid-cols-4 gap-1.5">
-                            {["10:00 AM", "12:00 PM", "4:00 PM", "6:00 PM"].map((slot) => {
-                              const isSelected = selectedBookingSlot === slot;
-                              return (
-                                <button
-                                  key={slot}
-                                  type="button"
-                                  onClick={() => setSelectedBookingSlot(slot)}
-                                  className={`py-1.5 text-[9px] font-bold rounded-lg transition-all ${
-                                    isSelected 
-                                      ? "bg-[#EAD293] text-slate-900 shadow-sm font-black" 
-                                      : "bg-white/5 text-slate-300 hover:bg-white/10"
-                                  }`}
-                                >
-                                  {slot}
-                                </button>
-                              );
-                            })}
+                            {["10:00 AM", "12:00 PM", "4:00 PM", "6:00 PM"].map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setSelectedBookingSlot(slot)}
+                                className={`py-1.5 text-[9px] font-bold rounded-lg transition-all ${
+                                  selectedBookingSlot === slot
+                                    ? "bg-[#EAD293] text-slate-900 font-black"
+                                    : "bg-white/5 text-slate-300 hover:bg-white/10"
+                                }`}
+                              >
+                                {slot}
+                              </button>
+                            ))}
                           </div>
                         </div>
 
-                        {/* Step 3: Contact details */}
-                        <div className="space-y-3 pt-1">
+                        <div className="space-y-3">
                           <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">3. Tu Nombre Completo</label>
+                            <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">Nombre</label>
                             <input
                               type="text"
                               value={bookingName}
                               onChange={(e) => setBookingName(e.target.value)}
                               placeholder="Ej: Laura Martínez"
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-[#EAD293]"
+                              className="w-full app-dark-input rounded-lg px-3 py-2 text-[11px] placeholder-slate-500"
                             />
                           </div>
-
                           <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">4. Tu número de WhatsApp</label>
+                            <label className="text-[9px] uppercase font-mono font-bold text-slate-400 block">WhatsApp</label>
                             <input
                               type="tel"
                               value={bookingWhatsApp}
                               onChange={(e) => setBookingWhatsApp(e.target.value)}
                               placeholder="Ej: +34 600 000 000"
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-[#EAD293]"
+                              className="w-full app-dark-input rounded-lg px-3 py-2 text-[11px] placeholder-slate-500"
                             />
                           </div>
                         </div>
 
-                        {/* CTA button */}
                         <button
                           type="button"
                           onClick={() => {
@@ -2814,118 +2453,80 @@ export default function App() {
                               return;
                             }
                             if (credits <= 0) {
-                              alert("No posees créditos disponibles en este momento. Haz clic en 'Recargar créditos' en el panel.");
+                              alert("No tienes créditos disponibles. Recárgalos en el panel de Análisis.");
                               return;
                             }
-                            setCredits(prev => Math.max(0, prev - 1));
+                            setCredits((prev) => Math.max(0, prev - 1));
                             setBookingSuccess(true);
                           }}
-                          className="w-full py-3 bg-[#EAD293] hover:bg-[#ebd59f] text-[#101C3D] text-[10.5px] uppercase font-black tracking-widest rounded-xl transition-all shadow-md active:scale-98 mt-2"
+                          className="w-full py-3 bg-[#EAD293] hover:bg-amber-200 text-[#101C3D] text-[10.5px] uppercase font-black tracking-widest rounded-xl transition-all shadow-md active:scale-[0.98]"
                         >
-                          Reservar mi Jugada Maestra
+                          Reservar mi jugada maestra
                         </button>
                       </div>
                     )}
-
                   </div>
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* SECTION 1-B: STRATEGIC RESULTS VIEW (Pestaña de Resultado Personalizado) */}
-          {activeTab === "resultado" && (
-            <PersonalizedResults
-              isLoading={isLoading}
-              currentPlan={currentPlan}
-              loadingStep={loadingStep}
-              loadingMessages={loadingMessages}
-              setActiveTab={setActiveTab}
-              feedTrackingPanel={feedTrackingPanel}
-              handleCopyToClipboard={handleCopyToClipboard}
-              currentStatusInfo={currentStatusInfo}
-              calcPrice={calcPrice}
-              setCalcPrice={setCalcPrice}
-              calcLeads={calcLeads}
-              setCalcLeads={setCalcLeads}
-              calcConversion={calcConversion}
-              setCalcConversion={setCalcConversion}
-              calcSavings={calcSavings}
-              setCalcSavings={setCalcSavings}
-              businessName={businessName}
-              handleNewAnalysis={handleNewAnalysis}
-              onAgendarSesion={() => setAgendarSesionOpen(true)}
-            />
-          )}
-
-          
 
         {/* SECTION 2: THE TRACKING DASHBOARD / PANEL DE SEGUIMIENTO */}
         {activeTab === "seguimiento" && (
           <div className="space-y-6">
-            
-            {/* Contenedor del Control en Azul Profundo Élite estilo Ref/Imagen */}
+
             <div className="bg-gradient-to-b from-[#1C2C54] to-[#101C3D] text-white p-6 sm:p-8 rounded-3xl border border-[#EAD293]/35 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-tr from-indigo-500/10 to-transparent rounded-full filter blur-3xl pointer-events-none" />
-              
+
               <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#EAD293]/15 pb-6">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Badge Workspace Activo con Punto de Pulso Cyan de la Imagen */}
                     <div className="flex items-center gap-2 bg-[#091124] px-3.5 py-1.5 rounded-full border border-cyan-500/30 text-[10px] uppercase font-mono font-extrabold tracking-wider text-cyan-400 shadow-md">
                       <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                       </span>
-                      Workspace Activo
+                      Workspace activo
                     </div>
-                    
-                    <span className="px-3 py-1 bg-[#1f305c]/60 text-slate-300 text-[10px] font-bold tracking-wide rounded-full border border-slate-700/50">
-                      Persistent Local Engine
-                    </span>
                   </div>
-                  
+
                   <h2 className="text-2xl font-serif font-bold text-[#E7CF91] mt-3 tracking-tight">
-                    Panel de Seguimiento de Metas
+                    Seguimiento de metas
                   </h2>
-                  <p className="text-xs text-slate-300 mt-1 pb-1 font-medium">
-                    Controla el progreso real del plan de 7 días. Concluye cada meta diaria y consigue tu título honorífico empresarial.
+                  <p className="text-xs text-slate-300 mt-1 pb-1 font-medium max-w-lg">
+                    Marca cada tarea del plan de 7 días y avanza etapa por etapa.
                   </p>
                 </div>
- 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (currentPlan) {
-                        feedTrackingPanel(currentPlan);
-                      } else {
-                        alert("Genera una estrategia de negocios primero para alimentarla, o usa nuestras plantillas.");
-                      }
-                    }}
-                    className="px-5 py-2.5 bg-transparent border-2 border-[#EAD293]/60 text-[#EAD293] hover:bg-[#EAD293]/10 hover:text-white text-xs font-black rounded-xl cursor-pointer flex items-center gap-1.5 transition-all shadow-md active:scale-95 duration-150"
-                  >
-                    <Plus className="w-4 h-4 text-[#EAD293]" />
-                    Cargar Plan Activo
-                  </button>
-                </div>
+
+                <button
+                  onClick={() => {
+                    if (currentPlan) {
+                      feedTrackingPanel(currentPlan);
+                    } else {
+                      alert("Genera una estrategia primero en la pestaña Estrategia, o usa un caso de ejemplo.");
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-transparent border-2 border-[#EAD293]/60 text-[#EAD293] hover:bg-[#EAD293]/10 hover:text-white text-xs font-black rounded-xl cursor-pointer flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0"
+                >
+                  <Plus className="w-4 h-4 text-[#EAD293]" />
+                  Cargar plan activo
+                </button>
               </div>
- 
-              {/* LIST OF TRACKING PLANS */}
+
               {trackingGoals.length === 0 ? (
                 <div className="py-20 text-center text-slate-400 space-y-4">
                   <ListTodo className="w-16 h-16 text-slate-500 mx-auto opacity-70 animate-bounce" />
-                  <p className="text-sm font-black text-[#E7CF91]">No hay planes operando en el panel activo.</p>
+                  <p className="text-sm font-black text-[#E7CF91]">Sin planes en seguimiento</p>
                   <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                    Genera tu estrategia personalizada en la pestaña <strong>“Mentoría de Alto Nivel”</strong> o selecciona uno de nuestros casos reales y presiona "Cargar Plan Activo" para iniciar el rastreo.
+                    Genera tu estrategia en <strong>Estrategia</strong> y pulsa &quot;Cargar plan activo&quot; para empezar.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-8 mt-6">
+                <div className="space-y-6 mt-6">
                   {trackingGoals.map((gObj) => {
                     const progress = getGoalProgress(gObj);
 
-                    // Extract sorted unique list of days (etapas)
                     const uniqueDays: string[] = Array.from(new Set(gObj.tasks.map(t => t.dia))).sort((a: any, b: any) => {
                       const strA = String(a);
                       const strB = String(b);
@@ -2934,131 +2535,109 @@ export default function App() {
                       return numA - numB;
                     }) as string[];
 
-                    // Define which day/stage is active in the view
                     const activeDay = selectedDays[gObj.id] || uniqueDays[0] || (gObj.tasks[0]?.dia) || "";
-
                     const activeDayTasks = gObj.tasks.filter((t) => t.dia === activeDay);
                     const isCurrentStageCompleted = activeDayTasks.length > 0 && activeDayTasks.every((t) => t.completed);
-                    
                     const activeDayIndex = uniqueDays.indexOf(activeDay);
                     const hasNextStage = activeDayIndex !== -1 && activeDayIndex < uniqueDays.length - 1;
                     const nextStageName = hasNextStage ? uniqueDays[activeDayIndex + 1] : null;
-
                     const allPlanCompleted = gObj.tasks.length > 0 && gObj.tasks.every(t => t.completed);
 
                     return (
                       <div
                         key={gObj.id}
-                        className="bg-[#FAF8F5] rounded-3xl p-6 sm:p-8 border border-[#EAD293]/60 hover:border-[#EAD293] shadow-md hover:shadow-lg transition-all duration-300 space-y-6 text-slate-800"
+                        className="rounded-3xl p-6 sm:p-8 border border-white/10 bg-white/[0.04] backdrop-blur-sm space-y-5"
                       >
-                        
-                        {/* Tracker Header */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/60">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
                           <div>
-                            <span className="text-[10px] text-[#854d0e] font-mono uppercase tracking-widest font-black bg-amber-50 border border-amber-200/50 px-2 py-0.5 rounded-md inline-block">
-                              NICHO: {gObj.niche}
-                            </span>
-                            <h3 className="text-xl font-bold text-[#0B1530] font-serif mt-2 tracking-tight">
+                            <h3 className="text-xl font-bold text-white font-serif tracking-tight">
                               {gObj.title}
                             </h3>
-                            <span className="text-[10px] text-slate-500 font-mono block font-semibold mt-1">
-                              📅 Iniciado el {gObj.createdAt}
+                            <span className="text-[10px] text-slate-400 font-mono block mt-1">
+                              Iniciado el {gObj.createdAt}
+                              {gObj.niche && gObj.niche !== gObj.title ? ` · ${gObj.niche}` : ""}
                             </span>
                           </div>
- 
+
                           <div className="flex items-center gap-3 shrink-0">
-                            {/* Badging ranking */}
-                            <div className="text-right">
-                              <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Rango de Éxito</span>
-                              <span className="text-xs font-black font-sans text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg inline-block">
-                                {progress.badge}
-                              </span>
-                            </div>
- 
+                            <span className="text-xs font-black text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg">
+                              {progress.badge}
+                            </span>
                             <button
                               onClick={() => deleteGoalHistory(gObj.id)}
-                              className="p-2 bg-white border border-slate-250 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-500 rounded-xl transition-all cursor-pointer shadow-xs active:scale-90"
-                              title="Eliminar del Panel"
+                              className="p-2 bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/30 text-slate-400 hover:text-red-400 rounded-xl transition-all cursor-pointer active:scale-90"
+                              title="Eliminar del panel"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
- 
-                        {/* Master Progress visualizer bar */}
+
                         <div>
                           <div className="flex items-center justify-between text-xs mb-2 font-mono font-bold">
-                            <span className="text-slate-600 flex items-center gap-1.5">
-                              <Crown className="w-3.5 h-3.5 text-amber-500" />
-                              PROGRESO GLOBAL DEL PLAN
+                            <span className="text-slate-400 flex items-center gap-1.5">
+                              <Crown className="w-3.5 h-3.5 text-amber-400" />
+                              Progreso global
                             </span>
-                            <span className="font-extrabold text-[#7c3aed] text-sm">
+                            <span className="font-extrabold text-amber-300 text-sm">
                               {progress.completedCount} / {progress.totalCount} ({progress.percent}%)
                             </span>
                           </div>
-                          <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200 shadow-inner">
+                          <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden border border-white/10">
                             <div
-                              className="bg-gradient-to-r from-[#8b5cf6] via-[#a855f7] to-[#ec4899] h-full transition-all duration-500 rounded-full"
+                              className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 h-full transition-all duration-500 rounded-full"
                               style={{ width: `${progress.percent}%` }}
                             />
                           </div>
                         </div>
 
-                        {/* ETAPAS / BARRAS DE PROGRESO DE CADA SERVICIO (INTERACTIVAS) */}
                         <div className="space-y-2">
-                          <div className="text-[11px] font-mono font-extrabold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                            <span>Siguiente Etapa a Resolver</span>
-                            <Info className="w-3.5 h-3.5 text-indigo-500" title="Haz clic en cualquier bloque/barra para explorar otra etapa" />
+                          <div className="text-[11px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">
+                            Etapas del plan
                           </div>
-                          
+
                           <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 snap-x scrollbar-none">
                             {uniqueDays.map((dayName, idx) => {
                               const dayTasks = gObj.tasks.filter(t => t.dia === dayName);
                               const completedDayCount = dayTasks.filter(t => t.completed).length;
                               const isDayCompleted = dayTasks.length > 0 && completedDayCount === dayTasks.length;
                               const isSelected = activeDay === dayName;
-                              
+
                               return (
                                 <button
                                   key={dayName}
                                   onClick={() => setSelectedDays(prev => ({ ...prev, [gObj.id]: dayName }))}
-                                  className={`flex-1 min-w-[130px] snap-center p-3.5 rounded-2xl border text-left transition-all duration-200 relative cursor-pointer group ${
+                                  className={`flex-1 min-w-[130px] snap-center p-3.5 rounded-2xl border text-left transition-all duration-200 relative cursor-pointer ${
                                     isSelected
                                       ? "bg-[#0B1530] text-white border-[#EAD293] shadow-md ring-2 ring-[#EAD293]/20"
                                       : isDayCompleted
-                                      ? "bg-[#ecfdf5] border-emerald-200 text-emerald-950"
-                                      : "bg-white border-slate-200 hover:border-indigo-300 text-slate-700"
+                                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                                      : "bg-white/5 border-white/10 hover:border-amber-500/30 text-slate-300"
                                   }`}
                                 >
                                   <div className="flex items-center justify-between mb-1.5">
                                     <span className={`text-[9px] font-mono uppercase tracking-widest font-black ${
-                                      isSelected ? "text-[#EAD293]" : isDayCompleted ? "text-emerald-700" : "text-indigo-600"
+                                      isSelected ? "text-[#EAD293]" : isDayCompleted ? "text-emerald-400" : "text-slate-400"
                                     }`}>
                                       Etapa {idx + 1}
                                     </span>
-                                    
                                     {isDayCompleted ? (
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-500 stroke-[2.5]" />
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
                                     ) : (
                                       <span className={`text-[9px] font-mono font-black ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
                                         {completedDayCount}/{dayTasks.length}
                                       </span>
                                     )}
                                   </div>
-                                  
-                                  <div className="font-bold text-xs truncate">
-                                    {dayName}
-                                  </div>
-
-                                  {/* Progress mini-bar under the stage */}
-                                  <div className="w-full bg-slate-100 dark:bg-slate-800/10 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-205">
+                                  <div className="font-bold text-xs truncate">{dayName}</div>
+                                  <div className="w-full bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
                                     <div
                                       className={`h-full transition-all duration-300 ${
-                                        isSelected 
-                                          ? "bg-gradient-to-r from-[#ebd390] to-amber-500" 
-                                          : isDayCompleted 
-                                          ? "bg-emerald-500" 
-                                          : "bg-indigo-500"
+                                        isSelected
+                                          ? "bg-gradient-to-r from-[#ebd390] to-amber-500"
+                                          : isDayCompleted
+                                          ? "bg-emerald-500"
+                                          : "bg-amber-500/60"
                                       }`}
                                       style={{ width: `${dayTasks.length ? (completedDayCount / dayTasks.length) * 100 : 0}%` }}
                                     />
@@ -3069,50 +2648,40 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* ACTIVE STAGE FOCUS CONTAINER */}
-                        <div className="bg-[#FAF6EE] p-5 rounded-2xl border-2 border-dashed border-[#EAD293]/50 space-y-4">
+                        <div className="bg-white/[0.03] p-5 rounded-2xl border border-dashed border-amber-500/20 space-y-4">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
-                              <h4 className="text-xs font-black font-mono text-indigo-950 uppercase tracking-wider">
-                                Tareas Pendientes en {activeDay || "Esta Etapa"}
-                              </h4>
-                            </div>
-                            <span className="text-[11px] font-mono font-black text-slate-500 uppercase">
-                              Etapa {activeDayIndex !== -1 ? activeDayIndex + 1 : 1} de {uniqueDays.length}
+                            <h4 className="text-xs font-black font-mono text-amber-200 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                              {activeDay || "Etapa actual"}
+                            </h4>
+                            <span className="text-[11px] font-mono font-black text-slate-500">
+                              {activeDayIndex !== -1 ? activeDayIndex + 1 : 1} / {uniqueDays.length}
                             </span>
                           </div>
 
-                          {/* Task list matching current stage */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {activeDayTasks.map((task) => (
                               <div
                                 key={task.id}
                                 onClick={() => handleToggleTask(gObj.id, task.id)}
-                                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 select-none ${
+                                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
                                   task.completed
-                                    ? "bg-[#ecfdf5] border-emerald-300 text-slate-500 opacity-80 shadow-xs"
-                                    : "bg-white border-slate-200 hover:border-[#EAD293] text-slate-700 shadow-xs"
+                                    ? "bg-emerald-500/10 border-emerald-500/25 text-slate-500 opacity-80"
+                                    : "bg-white/5 border-white/10 hover:border-amber-500/30 text-slate-200"
                                 }`}
                               >
                                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
-                                  task.completed 
-                                    ? "bg-emerald-500 border-emerald-400 text-white" 
-                                    : "border-slate-300 hover:border-indigo-600 bg-slate-50"
+                                  task.completed
+                                    ? "bg-emerald-500 border-emerald-400 text-white"
+                                    : "border-white/20 hover:border-amber-400 bg-white/5"
                                 }`}>
                                   {task.completed && <Check className="w-4 h-4 stroke-[3]" />}
                                 </div>
-
-                                <div className="space-y-1 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] uppercase font-mono tracking-wider font-extrabold bg-[#EAD293]/20 border border-[#EAD293]/40 px-1.5 py-0.5 rounded text-amber-900">
-                                      {task.dia}
-                                    </span>
-                                    <span className={`text-xs font-bold ${task.completed ? "text-slate-400 line-through" : "text-slate-900"}`}>
-                                      {task.dayTitle}
-                                    </span>
-                                  </div>
-                                  <p className={`text-xs leading-relaxed ${task.completed ? "text-slate-400 line-through" : "text-slate-600 font-semibold"}`}>
+                                <div className="space-y-1 flex-1 min-w-0">
+                                  <span className={`text-xs font-bold block ${task.completed ? "text-slate-500 line-through" : "text-white"}`}>
+                                    {task.dayTitle}
+                                  </span>
+                                  <p className={`text-xs leading-relaxed ${task.completed ? "text-slate-500 line-through" : "text-slate-400"}`}>
                                     {task.taskText}
                                   </p>
                                 </div>
@@ -3120,25 +2689,19 @@ export default function App() {
                             ))}
                           </div>
 
-                          {/* DYNAMIC NAVIGATION FEEDBACKS & ENCOURAGEMENTS */}
                           {isCurrentStageCompleted && hasNextStage && (
                             <motion.div
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="bg-gradient-to-r from-[#0B1530] to-[#162752] text-white p-4 rounded-xl border border-[#ebd390]/40 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2"
+                              className="bg-[#0B1530]/80 text-white p-4 rounded-xl border border-[#ebd390]/30 flex flex-col sm:flex-row items-center justify-between gap-4"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="p-2 bg-gradient-to-tr from-amber-500 to-amber-300 rounded-lg text-slate-900 shadow-inner shrink-0">
+                                <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0">
                                   <Award className="w-5 h-5" />
                                 </div>
-                                <div className="text-center sm:text-left">
-                                  <h5 className="text-xs font-black uppercase tracking-wider text-amber-350">
-                                    ¡Etapa {activeDayIndex + 1} resuelta!
-                                  </h5>
-                                  <p className="text-[11px] text-slate-300 font-medium">
-                                    Siguiente paso listo: <strong>{nextStageName}</strong>. ¡Haz clic para pasar de acuerdo al plan!
-                                  </p>
-                                </div>
+                                <p className="text-[11px] text-slate-300">
+                                  Etapa completada. Siguiente: <strong className="text-amber-200">{nextStageName}</strong>
+                                </p>
                               </div>
                               <button
                                 onClick={() => {
@@ -3146,9 +2709,9 @@ export default function App() {
                                     setSelectedDays(prev => ({ ...prev, [gObj.id]: nextStageName }));
                                   }
                                 }}
-                                className="px-4 py-2 bg-[#EAD293] hover:bg-white text-slate-950 text-xs font-black rounded-lg cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 transition-all duration-150 shrink-0"
+                                className="px-4 py-2 bg-[#EAD293] hover:bg-amber-200 text-slate-950 text-xs font-black rounded-lg cursor-pointer flex items-center gap-1.5 active:scale-95 transition-all shrink-0"
                               >
-                                <span>Pasar a {nextStageName}</span>
+                                Ir a {nextStageName}
                                 <ChevronRight className="w-3.5 h-3.5 stroke-[3.5]" />
                               </button>
                             </motion.div>
@@ -3158,16 +2721,14 @@ export default function App() {
                             <motion.div
                               initial={{ opacity: 0, scale: 0.98 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              className="bg-emerald-950 text-emerald-200 p-5 rounded-xl border border-emerald-500/30 text-center space-y-2.5 mt-2"
+                              className="bg-emerald-500/10 text-emerald-200 p-5 rounded-xl border border-emerald-500/25 text-center space-y-2"
                             >
-                              <div className="inline-flex p-2 bg-emerald-500/10 rounded-full border border-emerald-400/25">
-                                <Crown className="w-6 h-6 text-amber-400 animate-spin" style={{ animationDuration: '8s' }} />
-                              </div>
+                              <Crown className="w-6 h-6 text-amber-400 mx-auto" />
                               <h5 className="text-sm font-serif font-black uppercase text-amber-300 tracking-wider">
-                                ¡Plan Estratégico Completamente Concluido!
+                                Plan completado
                               </h5>
-                              <p className="text-xs text-emerald-100 max-w-md mx-auto leading-relaxed">
-                                Has resuelto cada hito táctico. El liderazgo supremo está asegurado y tu negocio se asienta sobre bases impecables.
+                              <p className="text-xs text-emerald-100/80 max-w-md mx-auto leading-relaxed">
+                                Has concluido todas las tareas del plan de 7 días.
                               </p>
                             </motion.div>
                           )}
@@ -3187,37 +2748,37 @@ export default function App() {
         {activeTab === "ejemplos" && (
           <div className="space-y-6">
             
-            <div className="bg-white p-6 rounded-2xl border border-amber-200/70 shadow-sm">
-              <h2 className="text-lg font-bold font-display text-slate-900 mb-2">
+            <div className="app-dark-card p-6 sm:p-8 rounded-2xl">
+              <h2 className="text-lg font-serif font-black text-amber-400 uppercase tracking-wide mb-2">
                 Casos de Ejemplo Reales
               </h2>
-              <p className="text-xs text-slate-500 mb-6 font-medium">
+              <p className="text-xs text-slate-400 mb-6">
                 Descubre cómo MinilabMentor IA resuelve de inmediato conflictos recurrentes en múltiples sectores de negocios. Haz clic en cualquiera de estos ejemplos piloto para rellenar de inmediato tu formulario diagnóstica y probar la respuesta estratégica.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {SAMPLE_PROBLEMS.map((sample, idx) => (
                   <div
                     key={idx}
-                    className="p-5 bg-[#faf9f3] border border-amber-200/60 rounded-2xl flex flex-col justify-between hover:border-violet-300 hover:shadow-md duration-200 transition-all shadow-xs"
+                    className="p-5 app-dark-card border-amber-500/20 rounded-2xl flex flex-col justify-between hover:border-amber-500/40 hover:bg-white/[0.05] duration-200 transition-all"
                   >
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-amber-800 font-mono tracking-wider">
+                      <span className="text-[10px] uppercase font-bold text-amber-400/90 font-mono tracking-wider">
                         Caso #{idx + 1} • {sample.model}
                       </span>
-                      <h4 className="text-sm font-bold text-slate-900 font-display mt-1">
+                      <h4 className="text-sm font-black text-white font-serif mt-1.5">
                         {sample.niche}
                       </h4>
-                      <p className="text-xs text-slate-650 mt-2 font-mono text-[11px] leading-relaxed font-semibold">
+                      <p className="text-xs text-slate-400 mt-2 font-sans leading-relaxed">
                         Freno: &ldquo;{sample.problem}&rdquo;
                       </p>
                     </div>
 
-                    <div className="mt-5 pt-3 border-t border-amber-100 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500 font-black">Reto: {sample.reto}</span>
+                    <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-slate-500 font-bold">Reto: {sample.reto}</span>
                       <button
                         onClick={() => handleLoadSample(sample)}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-black transition-all cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#0a0f18] rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 shrink-0"
                       >
                         Cargar Caso
                         <ArrowRight className="w-3 h-3" />
@@ -3228,16 +2789,15 @@ export default function App() {
               </div>
             </div>
 
-            {/* PLATFORM VALUE NOTES */}
-            <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 flex items-start gap-4">
-              <div className="p-3.5 bg-amber-100/60 text-amber-900 rounded-xl border border-amber-250">
+            <div className="app-dark-card-accent p-5 rounded-2xl flex items-start gap-4">
+              <div className="p-3.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/30 shrink-0">
                 <Info className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-amber-900 font-display uppercase tracking-wider">
+                <h4 className="text-xs font-black text-amber-400 font-serif uppercase tracking-wider">
                   Acerca de MinilabMentor IA
                 </h4>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed font-semibold">
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Esta herramienta está diseñada exclusivamente para que emprendedores eviten la parálisis por análisis (parálisis de bloqueos). Mediante ingeniería de prompts y el modelo Gemini, generamos reportes tácticos adaptados a tu facturación de hoy. Todas tus metas son almacenadas de forma local e irrecuperable en tu navegador (Local Storage) resguardando la privacidad de tu idea comercial.
                 </p>
               </div>
@@ -3247,6 +2807,36 @@ export default function App() {
         )}
 
       </main>
+
+      {/* Navegación inferior móvil */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#050a12]/95 backdrop-blur-md border-t border-white/10 z-50 px-2 py-2 safe-area-pb">
+        <div className="flex justify-around items-center max-w-lg mx-auto">
+          {[
+            { id: "resumen", label: "Inicio", icon: Home, action: () => navigateToDiagnostico("resumen"), active: activeTab === "diagnostico" && activeSubTab === "resumen" },
+            { id: "analisis", label: "Diagnóstico", icon: Briefcase, action: navigateToAnalisis, active: activeTab === "diagnostico" && activeSubTab === "analisis" },
+            { id: "estrategia", label: "Estrategia", icon: FileText, action: navigateToEstrategia, active: activeTab === "diagnostico" && activeSubTab === "estrategia" },
+            { id: "seguimiento", label: "Metas", icon: ListTodo, action: navigateToSeguimiento, active: activeTab === "seguimiento" },
+            { id: "ejemplos", label: "Casos", icon: Table, action: navigateToEjemplos, active: activeTab === "ejemplos" },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={item.action}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all cursor-pointer min-w-[56px] ${
+                  item.active ? "text-amber-300" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${item.active ? "text-amber-400" : ""}`} />
+                <span className="text-[9px] font-black">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+        </>
+        )}
 
       {/* OVERLAY POPUP MODAL 1: SOBRE MÍ (MINILABMENTOR BIOGRAPHY) */}
       <AnimatePresence>
@@ -4035,8 +3625,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setShowFestin(false);
-                    setActiveTab("diagnostico");
-                    setActiveSubTab("estrategia");
+                    navigateToEstrategia();
                   }}
                   className="w-full cursor-pointer py-3.5 px-6 bg-gradient-to-r from-amber-500 via-[#DFC07F] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 font-sans"
                 >
@@ -4062,6 +3651,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* FOOTER */}
+      {!isLandingView && (
       <footer className="mt-20 border-t border-[#ebd390]/30 bg-amber-50/10 py-8 text-center text-xs text-slate-500 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-semibold text-slate-600">© 2026 MinilabMentor IA • Diseñado para Emprendedores Imparables.</p>
@@ -4070,6 +3660,7 @@ export default function App() {
           </p>
         </div>
       </footer>
+      )}
 
 
 

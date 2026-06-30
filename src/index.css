@@ -31,6 +31,74 @@
   .letter-press {
     text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
   }
+  .hero-readability-panel {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 250, 240, 0.1) 0%,
+      rgba(201, 168, 124, 0.06) 45%,
+      rgba(20, 18, 15, 0.22) 100%
+    );
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+    border: 1px solid rgba(201, 168, 124, 0.2);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  .hero-glass-badge {
+    background: linear-gradient(135deg, rgba(201, 168, 124, 0.18) 0%, rgba(166, 124, 82, 0.1) 100%);
+    border: 1px solid rgba(201, 168, 124, 0.3);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    color: #e8d5b5;
+  }
+  .text-winner {
+    color: #faf6ef;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 0, 0, 0.25);
+  }
+  .text-winner-muted {
+    color: rgba(245, 238, 225, 0.82);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  .text-gold-accent {
+    background: linear-gradient(135deg, #f5d78e 0%, #e8c547 42%, #d4a853 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  }
+  .divider-ornament-h {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(201, 168, 124, 0.15) 15%, rgba(166, 124, 82, 0.65) 50%, rgba(201, 168, 124, 0.15) 85%, transparent 100%);
+  }
+  .divider-ornament-v {
+    width: 1px;
+    background: linear-gradient(180deg, transparent 0%, rgba(201, 168, 124, 0.2) 15%, rgba(166, 124, 82, 0.7) 50%, rgba(201, 168, 124, 0.2) 85%, transparent 100%);
+  }
+  .nav-winner-tab {
+    position: relative;
+  }
+  .nav-winner-tab[data-active="true"]::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0.75rem;
+    right: 0.75rem;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #c9a87c, #a67c52, #c9a87c, transparent);
+    border-radius: 2px;
+  }
+  .badge-winner {
+    background: linear-gradient(135deg, rgba(201, 168, 124, 0.18) 0%, rgba(166, 124, 82, 0.12) 100%);
+    border: 1px solid rgba(166, 124, 82, 0.35);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  }
+  .number-winner {
+    background: linear-gradient(180deg, #faf6ef 20%, #e8c547 55%, #c9a87c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  }
 }
 
 /* Scrollbar customization adapted to light prestige theme */
@@ -39,13 +107,122 @@
   height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f4f2ea;
+  background: #0d1520;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b45309;
+  background: #d97706;
+}
+
+/* Dark landing theme utilities */
+@layer utilities {
+  .landing-glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .landing-gold-text {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .icon-glow-gold {
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.85)) drop-shadow(0 0 14px rgba(251, 191, 36, 0.45));
+  }
+  .icon-glow-teal {
+    filter: drop-shadow(0 0 6px rgba(45, 212, 191, 0.85)) drop-shadow(0 0 14px rgba(45, 212, 191, 0.45));
+  }
+  .icon-glow-blue {
+    filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.85)) drop-shadow(0 0 14px rgba(96, 165, 250, 0.45));
+  }
+  .icon-glow-red {
+    filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.85)) drop-shadow(0 0 14px rgba(248, 113, 113, 0.45));
+  }
+  .icon-glow-gold-sm {
+    filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.35));
+  }
+  .icon-ring-gold {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.25), inset 0 0 8px rgba(251, 191, 36, 0.05);
+  }
+  .icon-ring-teal {
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.25), inset 0 0 8px rgba(45, 212, 191, 0.05);
+  }
+  .icon-ring-blue {
+    box-shadow: 0 0 12px rgba(96, 165, 250, 0.25), inset 0 0 8px rgba(96, 165, 250, 0.05);
+  }
+  .icon-ring-red {
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.25), inset 0 0 8px rgba(248, 113, 113, 0.05);
+  }
+  /* App interior — mismo lenguaje visual que la landing oscura */
+  .app-dark-bg {
+    background-color: #050a12;
+    color: #f8fafc;
+  }
+  .app-dark-header {
+    background: rgba(5, 10, 18, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .app-dark-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .app-dark-card-accent {
+    background: rgba(13, 21, 32, 0.85);
+    border: 1px solid rgba(251, 191, 36, 0.22);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .app-dark-input {
+    background: #050a12;
+    border: 1px solid rgba(100, 116, 139, 0.5);
+    color: #f8fafc;
+  }
+  .app-dark-input:focus {
+    outline: none;
+    border-color: rgba(251, 191, 36, 0.55);
+  }
+  .app-section-title {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .app-badge-gold {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: #fbbf24;
+  }
+  /* Workspace light panel — superficie unificada (sin bloques blancos sueltos) */
+  .workspace-shell {
+    background: linear-gradient(145deg, #faf6f8 0%, #f5f0f4 48%, #eef3f8 100%);
+    border: 1px solid rgba(234, 210, 147, 0.45);
+  }
+  .workspace-surface {
+    background: rgba(250, 246, 248, 0.72);
+    border: 1px solid rgba(200, 180, 200, 0.18);
+  }
+  .workspace-card {
+    background: rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(200, 180, 200, 0.15);
+  }
+  .workspace-input {
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #1e293b;
+  }
+  .workspace-input:focus {
+    outline: none;
+    border-color: rgba(53, 92, 125, 0.65);
+  }
 }
 
