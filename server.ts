@@ -2,7 +2,8 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { generatePlan, getMotivationPhrase } from "./lib/gemini";
+import { generatePlan } from "./lib/gemini";
+import { getMotivationPhrase } from "./lib/motivation";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
