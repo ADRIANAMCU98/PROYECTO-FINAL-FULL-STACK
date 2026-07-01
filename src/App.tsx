@@ -37,6 +37,8 @@ import {
   ChevronDown
 } from "lucide-react";
 import { DIAG_QUESTIONS, BUSINESS_MODELS, SAMPLE_PROBLEMS, FALLBACK_PLAN_MOCK } from "./data";
+import { FREE_RESOURCES, TEMPLATE_RESOURCES, type DownloadableResource } from "./data/resources";
+import { downloadTextFile } from "./utils/downloadResource";
 import { MentorPlan, DiagnosticAnswers, TrackingGoal } from "./types";
 import { PersonalizedResults } from "./components/PersonalizedResults";
 import { LandingPage } from "./components/LandingPage";
@@ -570,7 +572,7 @@ export default function App() {
 
   const getSectionTitle = (): string => {
     if (activeTab === "seguimiento") return "Panel de Seguimiento";
-    if (activeTab === "ejemplos") return "Plantillas y Casos Reales";
+    if (activeTab === "ejemplos") return "Guías, Plantillas y Casos Reales";
     if (activeTab === "resultado") return "Tu Estrategia Personalizada";
     const titles: Record<SubTabId, string> = {
       resumen: "Resumen General",
@@ -765,6 +767,12 @@ export default function App() {
     navigator.clipboard.writeText(text);
     setCopiedText(label);
     setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const handleDownloadResource = (resource: DownloadableResource) => {
+    downloadTextFile(resource.filename, resource.content);
+    setCopiedText(`¡${resource.title} descargada con éxito!`);
+    setTimeout(() => setCopiedText(null), 3000);
   };
 
   // Submit and create custom plan
@@ -1102,7 +1110,11 @@ export default function App() {
 
             <button
               onClick={() => setRecursosOpen(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 transition-all cursor-pointer text-xs font-black"
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all cursor-pointer text-xs font-black relative group ${
+                recursosOpen
+                  ? "bg-gradient-to-r from-amber-500/15 via-[#EAD293]/10 to-transparent text-white border-l-4 border-amber-500 shadow-md"
+                  : "hover:bg-slate-800/40 text-slate-400 hover:text-slate-200"
+              }`}
             >
               <BookOpen className="w-4 h-4 shrink-0" />
               <span>Recursos</span>
@@ -1737,24 +1749,24 @@ export default function App() {
               </div>
 
               {/* Vista previa del panel MiniLabMentor — superficie unificada */}
-              <div className="workspace-shell rounded-[28px] shadow-2xl p-4 sm:p-6">
-                <div className="workspace-surface rounded-2xl p-4 sm:p-5 space-y-4">
+              <div className="app-dark-card-accent rounded-[28px] shadow-2xl p-4 sm:p-6 border border-amber-500/20">
+                <div className="app-dark-card rounded-2xl p-4 sm:p-5 space-y-4">
 
-                  <div className="flex items-center justify-between border-b border-[#806B78]/15 pb-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <div>
-                      <span className="font-serif font-black text-sm text-[#355C7D]">MiniLabMentor</span>
-                      <h3 className="text-base font-bold text-[#3C1A2F] mt-0.5">
+                      <span className="font-serif font-black text-sm text-amber-400">MiniLabMentor</span>
+                      <h3 className="text-base font-bold text-white mt-0.5">
                         Panel de {businessName}
                       </h3>
-                      <p className="text-[10px] text-[#806B78] mt-0.5">Vista previa · se activa al completar el diagnóstico</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Vista previa · se activa al completar el diagnóstico</p>
                     </div>
                     <div
-                      className="flex items-center gap-1.5 bg-amber-100/40 border border-amber-200/40 px-2 py-0.5 rounded-full select-none cursor-pointer"
+                      className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full select-none cursor-pointer"
                       onClick={() => setAreaPremiumOpen(true)}
                     >
-                      <Crown className="w-2.5 h-2.5 text-amber-600" />
-                      <span className="text-[8.5px] uppercase font-mono font-extrabold text-amber-700">Premium</span>
-                      <div className="w-4 h-4 rounded-full bg-[#355C7D] text-white flex items-center justify-center text-[8px] font-black uppercase">U</div>
+                      <Crown className="w-2.5 h-2.5 text-amber-400" />
+                      <span className="text-[8.5px] uppercase font-mono font-extrabold text-amber-300">Premium</span>
+                      <div className="w-4 h-4 rounded-full bg-amber-500/30 text-amber-200 flex items-center justify-center text-[8px] font-black uppercase">U</div>
                     </div>
                   </div>
 
@@ -1770,16 +1782,16 @@ export default function App() {
                             ? `€${((calcPrice * calcLeads * (calcConversion / 100)) / 1000).toFixed(1)}K`
                             : "€24.6K",
                           delta: "+35%",
-                          color: "stroke-[#A06283]",
+                          color: "stroke-amber-400",
                           path: "M0,25 Q20,5 40,20 T80,10 T100,2",
                         },
                         { label: "Clientes nuevos", value: calcLeads > 0 ? String(calcLeads) : "156", delta: "+31%", color: "stroke-blue-500", path: "M0,20 L25,12 L50,18 L75,5 L100,8" },
                       ].map((metric) => (
-                        <div key={metric.label} className="workspace-card p-2.5 rounded-xl">
-                          <span className="text-[8px] text-[#806B78] uppercase font-bold tracking-wider font-mono">{metric.label}</span>
+                        <div key={metric.label} className="app-dark-card p-2.5 rounded-xl">
+                          <span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider font-mono">{metric.label}</span>
                           <div className="flex items-baseline gap-1 mt-0.5">
-                            <span className="text-sm font-bold font-serif text-[#3C1A2F]">{metric.value}</span>
-                            <span className="text-[7.5px] text-emerald-600 font-bold">{metric.delta}</span>
+                            <span className="text-sm font-bold font-serif text-white">{metric.value}</span>
+                            <span className="text-[7.5px] text-emerald-400 font-bold">{metric.delta}</span>
                           </div>
                           <div className="mt-1 h-5 flex items-end">
                             <svg viewBox="0 0 100 30" className={`w-full h-full ${metric.color} stroke-2 fill-none overflow-visible`}>
@@ -1789,18 +1801,18 @@ export default function App() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-[8px] text-[#806B78]/70 text-right mt-1 font-mono uppercase tracking-wider">
+                    <p className="text-[8px] text-slate-500 text-right mt-1 font-mono uppercase tracking-wider">
                       Variación vs. mes anterior
                     </p>
                   </div>
 
                   {/* Salud + prioridades */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="workspace-card p-4 rounded-2xl flex flex-col items-center text-center">
-                      <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide self-start w-full text-left">Salud del negocio</h5>
+                    <div className="app-dark-card p-4 rounded-2xl flex flex-col items-center text-center">
+                      <h5 className="text-[9px] text-slate-400 uppercase font-bold font-sans tracking-wide self-start w-full text-left">Salud del negocio</h5>
                       <div className="my-2.5 relative flex items-center justify-center">
                         <svg className="w-20 h-20 transform -rotate-90">
-                          <circle cx="40" cy="40" r="32" stroke="rgba(128,107,120,0.15)" strokeWidth="6" fill="transparent" />
+                          <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.08)" strokeWidth="6" fill="transparent" />
                           <circle
                             cx="40"
                             cy="40"
@@ -1813,39 +1825,39 @@ export default function App() {
                           />
                           <defs>
                             <linearGradient id="gradientMalva" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#355C7D" />
-                              <stop offset="100%" stopColor="#EE6596" />
+                              <stop offset="0%" stopColor="#fbbf24" />
+                              <stop offset="100%" stopColor="#f59e0b" />
                             </linearGradient>
                           </defs>
                         </svg>
                         <div className="absolute flex flex-col items-center">
-                          <span className="text-lg font-serif font-black text-[#355C7D]">87</span>
-                          <span className="text-[7px] text-[#806B78] font-bold uppercase tracking-wider -mt-1">/ 100</span>
+                          <span className="text-lg font-serif font-black text-amber-400">87</span>
+                          <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider -mt-1">/ 100</span>
                         </div>
                       </div>
-                      <p className="text-[9px] text-[#806B78] leading-snug px-2">
+                      <p className="text-[9px] text-slate-400 leading-snug px-2">
                         Buen punto de partida. El diagnóstico revelará dónde escalar con más impacto.
                       </p>
                       <button
                         onClick={navigateToEstrategia}
                         type="button"
-                        className="mt-3 w-full py-1.5 bg-[#355C7D] hover:bg-[#6D3254] text-white text-[8.5px] font-black uppercase tracking-widest rounded-lg transition-all"
+                        className="mt-3 w-full py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0a0f18] text-[8.5px] font-black uppercase tracking-widest rounded-lg transition-all"
                       >
                         Ver estrategia completa
                       </button>
                     </div>
 
-                    <div className="workspace-card p-4 rounded-2xl flex flex-col justify-between">
+                    <div className="app-dark-card p-4 rounded-2xl flex flex-col justify-between">
                       <div>
-                        <h5 className="text-[9px] text-[#806B78] uppercase font-bold font-sans tracking-wide mb-2.5">Próximas prioridades</h5>
+                        <h5 className="text-[9px] text-slate-400 uppercase font-bold font-sans tracking-wide mb-2.5">Próximas prioridades</h5>
                         <div className="space-y-2 text-left">
                           {[
                             "Optimizar embudo de conversión",
                             "Mejorar visibilidad orgánica (SEO)",
                             "Automatizar seguimiento de leads",
                           ].map((item) => (
-                            <div key={item} className="flex items-center gap-2 text-[9px] text-[#3C1A2F] font-bold">
-                              <span className="w-3.5 h-3.5 rounded-full bg-emerald-100/60 text-emerald-700 flex items-center justify-center text-[7px] font-black">✓</span>
+                            <div key={item} className="flex items-center gap-2 text-[9px] text-slate-200 font-bold">
+                              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[7px] font-black">✓</span>
                               <span>{item}</span>
                             </div>
                           ))}
@@ -1854,7 +1866,7 @@ export default function App() {
                       <button
                         onClick={navigateToEstrategia}
                         type="button"
-                        className="mt-4 text-left text-[9px] text-[#355C7D] hover:text-[#DFC07F] transition-colors font-extrabold flex items-center gap-1"
+                        className="mt-4 text-left text-[9px] text-amber-400 hover:text-amber-300 transition-colors font-extrabold flex items-center gap-1"
                       >
                         Ver plan detallado <ChevronRight className="w-3 h-3" />
                       </button>
@@ -2747,6 +2759,47 @@ export default function App() {
         {/* SECTION 3: TEMPLATE AND QUICK ACCESSIBILITIES */}
         {activeTab === "ejemplos" && (
           <div className="space-y-6">
+
+            <div className="app-dark-card p-6 sm:p-8 rounded-2xl">
+              <h2 className="text-lg font-serif font-black text-amber-400 uppercase tracking-wide mb-2">
+                Guías y Plantillas Descargables
+              </h2>
+              <p className="text-xs text-slate-400 mb-6">
+                Descarga recursos listos para usar en tu negocio: propuestas, seguimiento semanal y auditoría de precios.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                {TEMPLATE_RESOURCES.map((template) => (
+                  <div
+                    key={template.id}
+                    className="p-5 app-dark-card border-teal-500/20 rounded-2xl flex flex-col justify-between hover:border-teal-500/40 hover:bg-white/[0.05] duration-200 transition-all"
+                  >
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-teal-400/90 font-mono tracking-wider">
+                        Plantilla editable
+                      </span>
+                      <h4 className="text-sm font-black text-white font-serif mt-1.5">
+                        {template.title}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-2 font-sans leading-relaxed">
+                        {template.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadResource(template)}
+                        className="px-3 py-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-[#0a0f18] rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        Descargar guía
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             
             <div className="app-dark-card p-6 sm:p-8 rounded-2xl">
               <h2 className="text-lg font-serif font-black text-amber-400 uppercase tracking-wide mb-2">
@@ -2852,32 +2905,32 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-white rounded-3xl border-2 border-[#EAD293] max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="app-dark-modal rounded-3xl border border-amber-500/30 max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center border-b border-purple-50 pb-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#FAF6F0] flex items-center justify-center text-[#355C7D] border border-[#EAD293]/50">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <Crown className="w-4 h-4 text-amber-500" />
                   </div>
-                  <h3 className="text-base font-serif font-black text-[#3C1A2F]">Sobre mí • MiniLabMentor</h3>
+                  <h3 className="text-base font-serif font-black text-white">Sobre mí • MiniLabMentor</h3>
                 </div>
                 <button 
                   onClick={() => setSobreMiOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black cursor-pointer text-xs"
+                  className="w-8 h-8 rounded-full app-dark-modal-close flex items-center justify-center font-black cursor-pointer text-xs"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="space-y-3.5 text-xs text-slate-600 leading-relaxed font-sans">
-                <p className="font-semibold text-slate-800">
+              <div className="space-y-3.5 text-xs text-slate-300 leading-relaxed font-sans">
+                <p className="font-semibold text-white">
                   Hola, soy director estratégico y creador del ecosistema MiniLabMentor. Mi misión es que dejes atrás el desorden tecnológico y tomes el control absoluto de tu crecimiento.
                 </p>
                 <p>
                   Comencé diseñando soluciones web boutique enfocado en la conversión y la psicología del consumidor. Con el tiempo, diseñé una metodología inspirada en la estrategia de ajedrez donde cada pieza de tu negocio (tráfico, embudos, marca y liderazgo) cumple un rol estratégico determinante para anticipar tus metas financieras.
                 </p>
-                <div className="bg-[#FAF7F9] p-4 rounded-xl border border-purple-100/60 italic text-[#355C7D] font-serif">
+                <div className="bg-white/5 p-4 rounded-xl border border-amber-500/20 italic text-amber-200 font-serif">
                   "No se trata de publicar más contenido o de comprar más herramientas. Se trata de estructurar un embudo elegante de valor real y asumir un liderazgo sólido."
                 </div>
                 <p>
@@ -2885,7 +2938,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+              <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -2899,7 +2952,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setSobreMiOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-extrabold uppercase rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-extrabold uppercase rounded-xl transition-colors cursor-pointer border border-white/10"
                 >
                   Regresar
                 </button>
@@ -2923,19 +2976,19 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-white rounded-3xl border-2 border-[#EAD293] max-w-xl w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="app-dark-modal rounded-3xl border border-amber-500/30 max-w-xl w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center border-b border-purple-50 pb-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#FAF6F0] flex items-center justify-center text-[#355C7D] border border-[#EAD293]/50">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <Briefcase className="w-4 h-4 text-amber-500" />
                   </div>
-                  <h3 className="text-base font-serif font-black text-[#3C1A2F]">Portafolio de Servicios de Alto Valor</h3>
+                  <h3 className="text-base font-serif font-black text-white">Portafolio de Servicios de Alto Valor</h3>
                 </div>
                 <button 
                   onClick={() => setServiciosOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black cursor-pointer text-xs"
+                  className="w-8 h-8 rounded-full app-dark-modal-close flex items-center justify-center font-black cursor-pointer text-xs"
                 >
                   ✕
                 </button>
@@ -2963,17 +3016,17 @@ export default function App() {
                     desc: "Acompañamiento semanal personalizado para estructurar tus ofertas premium, consolidar tu control financiero y optimizar flujos reales."
                   }
                 ].map((serv, index) => (
-                  <div key={index} className="p-3.5 bg-gradient-to-tr from-[#FAF8FA] to-[#FAF6EE] rounded-2xl border border-slate-100 hover:border-[#EAD293]/50 transition-colors">
+                  <div key={index} className="p-3.5 app-dark-modal-item rounded-2xl transition-colors">
                     <div className="flex justify-between items-start gap-2">
-                      <h4 className="text-xs font-serif font-bold text-[#3C1A2F]">{serv.title}</h4>
-                      <span className="text-[10px] bg-amber-100 text-[#854d0e] px-2 py-0.5 rounded-md font-mono font-black">{serv.price}</span>
+                      <h4 className="text-xs font-serif font-bold text-white">{serv.title}</h4>
+                      <span className="text-[10px] bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-md font-mono font-black">{serv.price}</span>
                     </div>
                     <p className="text-[10.5px] text-slate-500 leading-relaxed mt-1 font-sans">{serv.desc}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+              <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -2988,7 +3041,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setServiciosOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-extrabold uppercase rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-extrabold uppercase rounded-xl transition-colors cursor-pointer border border-white/10"
                 >
                   Cerrar
                 </button>
@@ -3012,19 +3065,19 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-white rounded-3xl border-2 border-[#EAD293] max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="app-dark-modal rounded-3xl border border-amber-500/30 max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center border-b border-purple-50 pb-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#FAF6F0] flex items-center justify-center text-[#355C7D] border border-[#EAD293]/50">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <Target className="w-4 h-4 text-amber-500" />
                   </div>
-                  <h3 className="text-base font-serif font-black text-[#3C1A2F]">Nuestra Metodología de 3 Pilares</h3>
+                  <h3 className="text-base font-serif font-black text-white">Nuestra Metodología de 3 Pilares</h3>
                 </div>
                 <button 
                   onClick={() => setMetodologiaOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black cursor-pointer text-xs"
+                  className="w-8 h-8 rounded-full app-dark-modal-close flex items-center justify-center font-black cursor-pointer text-xs"
                 >
                   ✕
                 </button>
@@ -3055,14 +3108,14 @@ export default function App() {
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] bg-[#355C7D] text-white px-2 py-0.5 rounded-full font-mono font-black">{item.step}</span>
-                      <h4 className="text-xs font-bold text-[#3C1A2F]">{item.title}</h4>
+                      <h4 className="text-xs font-bold text-white">{item.title}</h4>
                     </div>
-                    <p className="text-[10.5px] text-slate-500 leading-relaxed pl-2 border-l border-purple-100">{item.desc}</p>
+                    <p className="text-[10.5px] text-slate-400 leading-relaxed pl-2 border-l border-amber-500/20">{item.desc}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div className="pt-4 border-t border-white/10 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setMetodologiaOpen(false)}
@@ -3090,56 +3143,40 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-white rounded-3xl border-2 border-[#EAD293] max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="app-dark-modal rounded-3xl border border-amber-500/30 max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center border-b border-purple-50 pb-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#FAF6F0] flex items-center justify-center text-[#355C7D] border border-[#EAD293]/50">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                     <BookOpen className="w-4 h-4 text-[#355C7D]" />
                   </div>
-                  <h3 className="text-base font-serif font-black text-[#3C1A2F]">Recursos Gratuitos para Crecimiento</h3>
+                  <h3 className="text-base font-serif font-black text-white">Recursos Gratuitos para Crecimiento</h3>
                 </div>
                 <button 
                   onClick={() => setRecursosOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black cursor-pointer text-xs"
+                  className="w-8 h-8 rounded-full app-dark-modal-close flex items-center justify-center font-black cursor-pointer text-xs"
                 >
                   ✕
                 </button>
               </div>
 
-              <p className="text-xs text-slate-500 font-sans leading-relaxed">
+              <p className="text-xs text-slate-400 font-sans leading-relaxed">
                 Descarga de manera libre y directa nuestras guías estratégicas. Diseñado para darte claridad instantánea sin demoras burocráticas comerciales:
               </p>
 
               {/* Download item rows with live alert status */}
               <div className="space-y-3 font-sans">
-                {[
-                  {
-                    title: "Guía de Ganchos Psicobioinstintivos 2026",
-                    desc: "La matriz exacta de 47 títulos listos para rellenar que detienen el scroll vertical de tus clientes ideales en Instagram, TikTok y LinkedIn."
-                  },
-                  {
-                    title: "Checklist de Auditoría de Conversión Web",
-                    desc: "Revisa punto por punto si tu página actual tiene los 12 disparadores del alto valor o si estás perdiendo llamadas por fricción de diseño."
-                  },
-                  {
-                    title: "Ebook: El Tablero del Escalado Inmediato",
-                    desc: "Introducción teórica y ejemplos de cómo reorganizar tus precios para duplicar ingresos de marca sin aumentar tus horas laborales."
-                  }
-                ].map((res, i) => (
-                  <div key={i} className="flex items-start justify-between p-3 bg-slate-50/50 hover:bg-[#FAF7FA] rounded-xl border border-slate-100 transition-colors">
+                {FREE_RESOURCES.map((res) => (
+                  <div key={res.id} className="flex items-start justify-between p-3 app-dark-modal-item rounded-xl transition-colors">
                     <div className="space-y-1 pr-3">
-                      <h4 className="text-xs font-extrabold text-[#3C1A2F]">{res.title}</h4>
-                      <p className="text-[10px] text-slate-500 leading-relaxed">{res.desc}</p>
+                      <h4 className="text-xs font-extrabold text-white">{res.title}</h4>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">{res.description}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setCopiedText(`¡${res.title} descargada con éxito!`);
-                        setTimeout(() => setCopiedText(null), 3000);
-                      }}
-                      className="cursor-pointer px-4 py-1.5 bg-gradient-[#355C7D] bg-[#355C7D] hover:bg-[#683250] text-[#EAD293] text-[9.5px] uppercase font-black tracking-wider rounded-lg transition-transform hover:scale-102"
+                      onClick={() => handleDownloadResource(res)}
+                      className="cursor-pointer px-4 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#0a0f18] text-[9.5px] uppercase font-black tracking-wider rounded-lg transition-transform hover:scale-105"
                     >
                       Descargar
                     </button>
@@ -3147,11 +3184,11 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div className="pt-4 border-t border-white/10 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setRecursosOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-extrabold uppercase rounded-lg cursor-pointer"
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-extrabold uppercase rounded-lg cursor-pointer border border-white/10"
                 >
                   Cerrar
                 </button>
@@ -3175,22 +3212,22 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-white rounded-3xl border-2 border-[#EAD293] max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="app-dark-modal rounded-3xl border border-amber-500/30 max-w-lg w-full p-6 sm:p-8 space-y-5 text-left relative shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center border-b border-purple-50 pb-3">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-200/50">
                     <Calendar className="w-4 h-4 text-amber-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-serif font-black text-[#3C1A2F]">Agendar Sesión de Consulta Élite</h3>
+                    <h3 className="text-base font-serif font-black text-white">Agendar Sesión de Consulta Élite</h3>
                     <p className="text-[9px] text-[#A06283] font-mono leading-none font-bold uppercase mt-0.5">ESTRATEGIA 1:1 CON COBERTURA MÁXIMA</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setAgendarSesionOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black cursor-pointer text-xs"
+                  className="w-8 h-8 rounded-full app-dark-modal-close flex items-center justify-center font-black cursor-pointer text-xs"
                 >
                   ✕
                 </button>
@@ -3201,7 +3238,7 @@ export default function App() {
                   <p className="text-xs text-amber-900 font-bold">
                     ⚠️ No posees créditos libres para agendar una sesión hoy.
                   </p>
-                  <p className="text-[10.5px] text-slate-600">
+                  <p className="text-[10.5px] text-slate-400">
                     Puedes recargar tus 3 diagnósticos libres instantáneamente con el botón de recarga de la tarjeta en el panel de inicio.
                   </p>
                   <button
@@ -3237,28 +3274,28 @@ export default function App() {
                   {/* Input form details */}
                   <div className="space-y-3">
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Nombre y Apellidos *</label>
+                      <label className="block font-bold text-slate-300 mb-1">Nombre y Apellidos *</label>
                       <input 
                         required 
                         type="text" 
                         placeholder="Ej: Sofía Martínez" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-[#355C7D]"
+                        className="w-full app-dark-input rounded-lg p-2"
                       />
                     </div>
 
                      <div className="space-y-2.5">
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">Fecha de Sesión *</label>
+                        <label className="block font-bold text-slate-300 mb-1">Fecha de Sesión *</label>
                         <input 
                           required 
                           type="date" 
                           min="2026-06-22"
                           defaultValue="2026-06-30"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-[#355C7D] cursor-pointer"
+                          className="w-full app-dark-input rounded-lg p-2.5 text-xs font-semibold cursor-pointer"
                         />
                       </div>
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1.5 flex justify-between items-center">
+                        <label className="block font-bold text-slate-300 mb-1.5 flex justify-between items-center">
                           <span>Hora Favorita (Slots Disponibles) *</span>
                           <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">Zona Central</span>
                         </label>
@@ -3279,8 +3316,8 @@ export default function App() {
                                 onClick={() => setSelectedHour(hourOption + " (Central)")}
                                 className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all duration-200 flex items-center justify-between cursor-pointer ${
                                   isSelected
-                                    ? "bg-[#355C7D] border-[#355C7D] text-[#EAD293] shadow-md scale-102"
-                                    : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                                    ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md scale-105"
+                                    : "bg-white/5 border-white/10 text-slate-300 hover:border-amber-500/30 hover:bg-white/10"
                                 }`}
                               >
                                 <span>{hourOption}</span>
@@ -3297,18 +3334,18 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Tu Negocio / Idea a Auditar</label>
+                      <label className="block font-bold text-slate-300 mb-1">Tu Negocio / Idea a Auditar</label>
                       <input 
                         type="text" 
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="Ej: Cafetería Aromas" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none"
+                        className="w-full app-dark-input rounded-lg p-2"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                  <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
                     <button
                       type="submit"
                       className="cursor-pointer px-5 py-2.5 bg-[#355C7D] hover:bg-[#5E2E4B] text-[#EAD293] font-black uppercase tracking-wider rounded-xl transition-all shadow-sm"
@@ -3318,7 +3355,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setAgendarSesionOpen(false)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase rounded-xl cursor-pointer"
+                      className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 font-extrabold uppercase rounded-xl cursor-pointer border border-white/10"
                     >
                       Cancelar
                     </button>
@@ -3344,7 +3381,7 @@ export default function App() {
               initial={{ scale: 0.9, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 15 }}
-              className="bg-gradient-to-tr from-white to-[#FDFBF7] rounded-3xl border-3 border-[#EAD293] max-w-md w-full p-6 sm:p-8 space-y-5 text-center relative shadow-2xl"
+              className="app-dark-modal rounded-3xl border border-amber-500/35 max-w-md w-full p-6 sm:p-8 space-y-5 text-center relative shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
@@ -3354,16 +3391,16 @@ export default function App() {
                   <Crown className="w-8 h-8 text-[#0B1530] animate-bounce" style={{ animationDuration: '3s' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-serif font-black text-[#0B1530] tracking-tight">MiniLabMentor VIP Club</h3>
-                  <span className="text-[9px] text-[#A06283] font-mono leading-none font-black uppercase tracking-widest mt-1 block">ACCESO PLATINO ILIMITADO</span>
+                  <h3 className="text-lg font-serif font-black text-white tracking-tight">MiniLabMentor VIP Club</h3>
+                  <span className="text-[9px] text-amber-400 font-mono leading-none font-black uppercase tracking-widest mt-1 block">ACCESO PLATINO ILIMITADO</span>
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-600 leading-relaxed font-sans">
+              <div className="space-y-3 text-xs text-slate-300 leading-relaxed font-sans">
                 <p>
                   Obtén el beneficio de créditos ilimitados de autodiagnóstico con Inteligencia Artificial, informes exportables en PDF, integraciones a CRM y acceso directo a nuestro grupo VIP de WhatsApp de emprendedores de élite.
                 </p>
-                <div className="p-3 bg-[#F0F4F8] rounded-xl border border-[#EAD293]/30 text-slate-700 font-medium">
+                <div className="p-3 app-dark-modal-item rounded-xl text-slate-200 font-medium">
                   🌟 Incluye 1 llamada de estrategia VIP 1:1 de 45 minutos conmigo cada mes.
                 </div>
               </div>
@@ -3383,7 +3420,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setAreaPremiumOpen(false)}
-                  className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold uppercase rounded-lg transition-colors cursor-pointer text-[10.5px]"
+                  className="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-400 font-bold uppercase rounded-lg transition-colors cursor-pointer text-[10.5px] border border-white/10"
                 >
                   Volver al Panel Principal
                 </button>
@@ -3407,12 +3444,12 @@ export default function App() {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white rounded-2xl border border-slate-200 max-w-sm w-full p-5 text-center space-y-3 relative shadow-xl"
+              className="app-dark-modal rounded-2xl border border-white/10 max-w-sm w-full p-5 text-center space-y-3 relative shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <Info className="w-8 h-8 text-amber-500 mx-auto" />
-              <h3 className="text-sm font-bold text-[#3C1A2F]">Característica en Desarrollo</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+              <h3 className="text-sm font-bold text-white">Característica en Desarrollo</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
                 Esta sección requiere conexión activa con el servidor CRM. Suscríbete al Plan VIP utilizando el enlace VIP superior para desbloquear informes continuos.
               </p>
               <button
@@ -3441,22 +3478,22 @@ export default function App() {
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 space-y-4 relative shadow-2xl"
+              className="app-dark-modal rounded-3xl border border-white/10 max-w-lg w-full p-6 space-y-4 relative shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <div className="flex justify-between items-center pb-2 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-gradient-to-tr from-amber-400 to-[#EAD293] rounded-xl text-slate-900 shadow-sm">
+                  <div className="p-2 bg-gradient-to-tr from-amber-400 to-amber-500 rounded-xl text-[#0a0f18] shadow-sm">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Comunidad Élite</h3>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Comunidad Élite</h3>
                     <p className="text-[9px] text-slate-400 font-mono font-bold leading-none mt-0.5">SOPORTE Y COLABORACIÓN MENTORÍA</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setComunidadOpen(false)}
-                  className="text-xs font-black text-slate-400 hover:text-slate-600 uppercase"
+                  className="text-xs font-black text-slate-400 hover:text-white uppercase"
                 >
                   Cerrar
                 </button>
@@ -3478,20 +3515,20 @@ export default function App() {
                   setCommunityMessages(prev => [newMsg, ...prev]);
                   setNewMsgText("");
                 }}
-                className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200"
+                className="space-y-2 app-dark-modal-item p-3 rounded-2xl"
               >
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-left">Publicar un pensamiento o duda rápida:</p>
                 <div className="flex gap-2">
                   <input 
                     type="text"
-                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#355C7D]"
+                    className="flex-1 app-dark-input rounded-xl px-3 py-2 text-xs"
                     placeholder="Escribe tu consulta para Adri y la comunidad..."
                     value={newMsgText}
                     onChange={(e) => setNewMsgText(e.target.value)}
                   />
                   <button 
                     type="submit"
-                    className="cursor-pointer bg-[#355C7D] text-white text-[10px] uppercase font-black px-4 rounded-xl hover:bg-[#2C4E6D] transition-colors"
+                    className="cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a0f18] text-[10px] uppercase font-black px-4 rounded-xl hover:from-amber-300 hover:to-amber-400 transition-colors"
                   >
                     Enviar
                   </button>
@@ -3501,15 +3538,15 @@ export default function App() {
               {/* Message scroll list */}
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {communityMessages.map((msg: any) => (
-                  <div key={msg.id} className="p-3 bg-white border border-slate-150 rounded-2xl shadow-xs space-y-1.5 text-left">
+                  <div key={msg.id} className="p-3 app-dark-modal-item rounded-2xl space-y-1.5 text-left">
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-xs font-black text-slate-800">{msg.author}</span>
-                        <span className="text-[9px] text-[#A06283] font-bold ml-2 bg-purple-50 px-1.5 py-0.5 rounded-full uppercase">{msg.role}</span>
+                        <span className="text-xs font-black text-white">{msg.author}</span>
+                        <span className="text-[9px] text-amber-300 font-bold ml-2 bg-amber-500/10 px-1.5 py-0.5 rounded-full uppercase">{msg.role}</span>
                       </div>
-                      <span className="text-[9px] text-slate-400">{msg.time}</span>
+                      <span className="text-[9px] text-slate-500">{msg.time}</span>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">{msg.text}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{msg.text}</p>
                     <div className="flex justify-between items-center pt-1">
                       <button 
                         type="button"
@@ -3579,28 +3616,28 @@ export default function App() {
               initial={{ scale: 0.8, y: 50, rotate: -1 }}
               animate={{ scale: 1, y: 0, rotate: 0 }}
               exit={{ scale: 0.8, y: 50 }}
-              className="bg-white rounded-3xl border-4 border-amber-400 max-w-lg w-full p-6 sm:p-8 space-y-6 relative shadow-[0_0_50px_rgba(245,158,11,0.5)] text-center"
+              className="app-dark-modal rounded-3xl border-2 border-amber-400/60 max-w-lg w-full p-6 sm:p-8 space-y-6 relative shadow-[0_0_50px_rgba(245,158,11,0.25)] text-center"
               onClick={(e) => e.stopPropagation()}
             >
               {/* TOP TROPHY EMBLEM */}
-              <div className="mx-auto w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl border-2 border-amber-300 shadow-inner animate-bounce">
+              <div className="mx-auto w-20 h-20 bg-amber-500/15 rounded-full flex items-center justify-center text-4xl border-2 border-amber-400/40 shadow-inner animate-bounce">
                 🏆
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xl sm:text-2xl font-serif font-black text-slate-900 tracking-tight">
+                <h3 className="text-xl sm:text-2xl font-serif font-black text-white tracking-tight">
                   ¡OPTIMIZACIÓN LOGRADA! 🎉
                 </h3>
-                <p className="text-xs text-amber-850 font-bold uppercase tracking-wider font-mono">
+                <p className="text-xs text-amber-400 font-bold uppercase tracking-wider font-mono">
                   Tu Mentor de Negocios IA Élite
                 </p>
-                <p className="text-xs text-slate-600 leading-relaxed font-sans font-medium px-2">
-                  Hemos diagnosticado con éxito <strong className="text-[#355C7D]">{businessName || "tu negocio"}</strong>. Hemos detectado las fugas de flujo de caja y diseñado una ruta táctica imparable de 7 días.
+                <p className="text-xs text-slate-300 leading-relaxed font-sans font-medium px-2">
+                  Hemos diagnosticado con éxito <strong className="text-amber-300">{businessName || "tu negocio"}</strong>. Hemos detectado las fugas de flujo de caja y diseñado una ruta táctica imparable de 7 días.
                 </p>
               </div>
 
               {/* INTERACTIVE PROGRESS MILESTONES WITH DELAYED REVEAL */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 space-y-2.5 text-left font-sans">
+              <div className="app-dark-modal-item p-4 rounded-2xl space-y-2.5 text-left font-sans">
                 {[
                   { label: "Modelo de Riqueza Calculado", icon: "📊" },
                   { label: "Mapeo de Nicho y Cliente Ideal Completado", icon: "🎯" },
@@ -3612,7 +3649,7 @@ export default function App() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 * idx }}
-                    className="flex items-center gap-3 text-xs font-semibold text-slate-700"
+                    className="flex items-center gap-3 text-xs font-semibold text-slate-200"
                   >
                     <span className="text-emerald-500 font-bold text-base">✓</span>
                     <span>{item.icon} {item.label}</span>
