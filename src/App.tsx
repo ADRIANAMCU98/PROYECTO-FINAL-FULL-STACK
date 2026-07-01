@@ -1250,10 +1250,14 @@ export default function App() {
                     {/* LED-PULSING FREE AUDIT BUTTON */}
                     <button
                       onClick={() => {
-                        const el = document.getElementById("auth-diagnosis-form");
-                        if (el) {
-                          el.scrollIntoView({ behavior: "smooth", block: "center" });
-                        }
+                        setActiveTab("diagnostico");
+                        setActiveSubTab("analisis");
+                        setTimeout(() => {
+                          const el = document.getElementById("auth-diagnosis-form");
+                          if (el) {
+                            el.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }
+                        }, 100);
                       }}
                       type="button"
                       className="cursor-pointer group relative px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.6)] hover:shadow-[0_0_25px_rgba(16,185,129,0.9)] border-2 border-emerald-400/40 transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 font-sans animate-bounce"
@@ -1592,7 +1596,7 @@ export default function App() {
                           {isLoading ? (
                             <>
                               <RefreshCw className="w-5 h-5 text-[#EAD293] animate-spin" />
-                              <span className="animate-pulse text-sm sm:text-base">Analizando {businessName || "tu negocio"}...</span>
+                              <span className="animate-pulse text-xs sm:text-sm">ANALIZANDO SI TIENES UN HOBBY O UNA MAQUINA DE RIQUEZA</span>
                             </>
                           ) : (
                             <>
@@ -2322,7 +2326,7 @@ export default function App() {
                       {isLoading ? (
                         <>
                           <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                          <span className="animate-pulse text-sm sm:text-base">Analizando {businessName || "tu negocio"}...</span>
+                          <span className="animate-pulse text-xs sm:text-sm">ANALIZANDO SI TIENES UN HOBBY O UNA MAQUINA DE RIQUEZA</span>
                         </>
                       ) : (
                         <>

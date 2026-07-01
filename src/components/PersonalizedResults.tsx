@@ -111,9 +111,14 @@ export const PersonalizedResults: React.FC<PersonalizedResultsProps> = ({
               <span className="text-[10px] tracking-widest font-mono font-black text-amber-300 uppercase bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/30">
                 PROCESANDO CON CONSULTORÍA IA ÉLITE
               </span>
-              <h3 className="text-xl sm:text-2xl font-black font-serif text-white tracking-tight">
-                {businessName ? `Escaneando y Optimizando: ${businessName}` : "Analizando Métricas..."}
+              <h3 className="text-xl sm:text-2xl font-black font-serif text-white tracking-tight uppercase">
+                ANALIZANDO SI TIENES UN HOBBY O UNA MAQUINA DE RIQUEZA
               </h3>
+              {businessName && (
+                <p className="text-amber-300 font-sans text-xs sm:text-sm font-bold uppercase tracking-wider">
+                  Negocio: {businessName}
+                </p>
+              )}
 
               {/* Status information messages */}
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 backdrop-blur-xs">
