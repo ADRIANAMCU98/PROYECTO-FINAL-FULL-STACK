@@ -40,8 +40,10 @@ import { DIAG_QUESTIONS, BUSINESS_MODELS, SAMPLE_PROBLEMS, FALLBACK_PLAN_MOCK } 
 import { MentorPlan, DiagnosticAnswers, TrackingGoal } from "./types";
 import { PersonalizedResults } from "./components/PersonalizedResults";
 
-const chessStrategyImg = "/src/assets/images/chess_testtube_strategy_1781808775902.jpg";
-const coachingHeroImg = "/src/assets/images/coaching_hero_1782597057691.jpg";
+// @ts-expect-error - Vite virtual static asset import
+import chessStrategyImg from "./assets/images/chess_testtube_strategy_1781808775902.jpg";
+// @ts-expect-error - Vite virtual static asset import
+import coachingHeroImg from "./assets/images/coaching_hero_1782597057691.jpg";
 
 // Prebuilt highly polished strategy plans for instant premium transformations
 export function getPrebuiltPlanForSample(nicheName: string): MentorPlan {
