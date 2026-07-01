@@ -17,8 +17,8 @@ import {
   type GlowColor,
 } from "./StrategyIcons";
 
-const chessHeroBackground = "/src/assets/images/chess_hero_background.png";
-const chessWealthBanner = "/src/assets/images/chess_wealth_banner_1782592054142.jpg";
+// @ts-expect-error - Vite static asset import
+import chessHeroBackground from "../assets/images/chess_hero_background.png";
 
 interface LandingPageProps {
   userEmail: string;
@@ -373,7 +373,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="relative py-12 sm:py-16 md:py-24 px-4 sm:px-6 md:px-10 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: `url('${chessWealthBanner}')` }}
+          style={{ backgroundImage: `url('${chessHeroBackground}')` }}
           aria-hidden="true"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#050a12] via-[#050a12]/95 to-[#050a12]/80" />

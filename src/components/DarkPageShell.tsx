@@ -1,7 +1,8 @@
 import React from "react";
 import { ArrowLeft, Crown } from "lucide-react";
 
-const chessHeroBackground = "/src/assets/images/chess_hero_background.png";
+// @ts-expect-error - Vite static asset import
+import chessHeroBackground from "../assets/images/chess_hero_background.png";
 
 interface DarkPageShellProps {
   title: string;
